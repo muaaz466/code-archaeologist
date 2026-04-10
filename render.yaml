@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: code-archaeologist-api
+    runtime: docker
+    repo: https://github.com/yourusername/code-archaeologist
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 8000
+    plan: free
+    healthCheckPath: /health
