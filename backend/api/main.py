@@ -641,7 +641,7 @@ async def calculate_score(session_id: str, benchmark: Optional[str] = "python"):
         graph = discovery.discover_causal_graph(min_confidence=0.2)
         
         # Calculate score using ScoreBenchmark
-        benchmark = ScoreBenchmark(benchmark)
+        benchmark = ScoreBenchmark()
         score = benchmark.calculate_score(graph, functions)
         
         return {
