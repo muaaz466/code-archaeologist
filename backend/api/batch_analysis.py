@@ -147,6 +147,7 @@ class BatchAnalyzer:
                         files_analyzed=0,
                         total_events=0,
                         functions_found=[],
+                        languages=[],
                         causal_graph=None,
                         errors=errors,
                         processing_time_ms=(time.time() - start_time) * 1000
@@ -241,7 +242,8 @@ class BatchAnalyzer:
         # Debug: Show final counts
         print(f"📊 FINAL RESULT: {files_analyzed} files, {len(all_functions)} functions, {len(all_events)} events")
         
-        return BatchResult(
+        # Build result
+        result = BatchResult(
             session_id=session_id,
             files_analyzed=files_analyzed,
             total_events=len(all_events),
@@ -251,6 +253,8 @@ class BatchAnalyzer:
             errors=errors,
             processing_time_ms=processing_time if 'processing_time' in locals() else (time.time() - start_time) * 1000
         )
+        print(f"🎯 RETURNING: files={result.files_analyzed}, funcs={len(result.functions_found)}, events={result.total_events}, langs={result.languages}")
+        return result
     
     def _find_source_files(self, root_dir: Path) -> List[Path]:
         """Find all source files in directory."""
