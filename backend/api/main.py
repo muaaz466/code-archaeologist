@@ -464,6 +464,7 @@ async def batch_analyze(file: UploadFile = File(...)):
             "files_analyzed": result.files_analyzed,
             "total_events": result.total_events,
             "functions_found": result.functions_found,
+            "languages": result.languages,
             "has_causal_graph": result.causal_graph is not None,
             "processing_time_ms": result.processing_time_ms,
             "errors": result.errors if result.errors else None
