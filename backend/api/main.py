@@ -520,7 +520,11 @@ async def causal_discover(session_id: str, min_confidence: float = 0.3):
         if not session:
             raise HTTPException(404, "Session not found")
         
-        events = session.get("events", [])
+        # Debug: Check session type
+        print(f"🔍 Session type: {type(session)}, keys: {session.keys() if isinstance(session, dict) else 'N/A'}")
+        
+        events = session.get("events", []) if isinstance(session, dict) else []
+        print(f"🔍 Events type: {type(events)}, count: {len(events) if isinstance(events, list) else 'N/A'}")
         
         if not events:
             return {"error": "No events in session"}
@@ -609,6 +613,7 @@ async def calculate_score(session_id: str, benchmark: Optional[str] = "python"):
     try:
         from backend.graph.score_benchmark import ScoreBenchmark
         from backend.api.batch_analysis import get_batch_analyzer
+        from backend.causal.causal_discovery import CausalDiscovery
         
         session = None
         
