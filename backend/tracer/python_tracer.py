@@ -275,6 +275,22 @@ def trace_python_file(source_path: str, project_root: Optional[str] = None) -> L
     
     try:
         runpy.run_path(str(file_path), run_name="__main__")
+    except Exception as e:
+        # Log error but don't crash - return partial trace if any
+        print(f"⚠️ Error tracing {file_path}: {e}")
+        # Add a synthetic event to show the file was attempted
+        events.append(TraceEvent(
+            id=f"{filename}:1:__error__",
+            event="error",
+            function="__trace_error__",
+            filename=filename,
+            lineno=1,
+            code=f"# Trace error: {str(e)[:100]}",
+            parent=None,
+            language="python",
+            reads=[],
+            writes=[],
+        ))
     finally:
         sys.settrace(old_trace)
         if project_path:
