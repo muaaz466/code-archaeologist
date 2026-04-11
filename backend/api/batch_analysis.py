@@ -114,9 +114,18 @@ class BatchAnalyzer:
                 source_files = self._find_source_files(tmp_path)
                 
                 for file_path in source_files:
+                    events = []
                     try:
                         # Trace the file
                         events = trace_python_file(str(file_path))
+                        print(f"✅ Traced {file_path}: {len(events)} events")
+                    except Exception as e:
+                        error_msg = f"Error tracing {file_path}: {str(e)}"
+                        errors.append(error_msg)
+                        print(f"⚠️ {error_msg}")
+                    
+                    # Count file and use events even if partial
+                    if events:
                         all_events.extend(events)
                         files_analyzed += 1
                         
@@ -124,12 +133,6 @@ class BatchAnalyzer:
                         for event in events:
                             if event.function and not event.function.startswith('__'):
                                 all_functions.add(event.function)
-                                
-                    except Exception as e:
-                        error_msg = f"Error analyzing {file_path}: {str(e)}"
-                        errors.append(error_msg)
-                        print(f"⚠️ {error_msg}")
-                        continue
                 
                 # Build causal graph
                 causal_graph = None
