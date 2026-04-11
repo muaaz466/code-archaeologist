@@ -254,6 +254,18 @@ class BatchAnalyzer:
             processing_time_ms=processing_time if 'processing_time' in locals() else (time.time() - start_time) * 1000
         )
         print(f"🎯 RETURNING: files={result.files_analyzed}, funcs={len(result.functions_found)}, events={result.total_events}, langs={result.languages}")
+        # Debug: Show JSON output
+        import json
+        result_dict = {
+            'session_id': result.session_id,
+            'files_analyzed': result.files_analyzed,
+            'total_events': result.total_events,
+            'functions_found': result.functions_found,
+            'languages': result.languages,
+            'errors': result.errors,
+            'processing_time_ms': result.processing_time_ms
+        }
+        print(f"📤 JSON RESPONSE: {json.dumps(result_dict, default=str)[:200]}")
         return result
     
     def _find_source_files(self, root_dir: Path) -> List[Path]:
@@ -283,6 +295,20 @@ class BatchAnalyzer:
         with open(session_file, 'w') as f:
             json.dump(data, f, default=str, indent=2)
         print(f"💾 Session saved: {session_file}")
+    
+    def _load_session(self, session_id: str) -> Optional[Dict]:
+        """Load session data from file."""
+        session_file = self.sessions_dir / f"{session_id}.json"
+        if session_file.exists():
+            try:
+                with open(session_file, 'r') as f:
+                    data = json.load(f)
+                print(f"📂 Session loaded: {session_file}")
+                return data
+            except Exception as e:
+                print(f"⚠️ Error loading session {session_id}: {e}")
+                return None
+        return None
 
 
 # Singleton instance
