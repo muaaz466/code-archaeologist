@@ -153,6 +153,19 @@ class BatchAnalyzer:
                 
                 # Find and analyze source files
                 source_files = self._find_source_files(tmp_path)
+                print(f"🔍 Found {len(source_files)} source files in {tmp_path}")
+                
+                # Debug: list all files found
+                if source_files:
+                    for sf in source_files[:5]:  # Show first 5
+                        print(f"  📄 {sf}")
+                    if len(source_files) > 5:
+                        print(f"  ... and {len(source_files) - 5} more")
+                else:
+                    # List all files in tmp_path for debugging
+                    print(f"📂 Contents of {tmp_path}:")
+                    for item in tmp_path.rglob('*'):
+                        print(f"  {item}")
                 
                 for file_path in source_files:
                     events = []
@@ -173,6 +186,8 @@ class BatchAnalyzer:
                         if ast_events:
                             events = ast_events
                             print(f"  ✅ AST found {len(ast_functions)} functions")
+                        else:
+                            print(f"  ❌ AST found no functions in {file_path}")
                     
                     # Count file and use events even if partial
                     if events:
