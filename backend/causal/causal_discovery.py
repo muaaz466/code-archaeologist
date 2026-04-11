@@ -75,8 +75,21 @@ class CausalDiscovery:
         Args:
             events: List of trace events with function, timestamp, etc.
         """
+        # Convert TraceEvent objects to dicts if needed
+        def _to_dict(e):
+            if hasattr(e, 'function'):
+                return {
+                    'function': e.function,
+                    'parent': getattr(e, 'parent', None),
+                    'timestamp': getattr(e, 'timestamp', None),
+                    'filename': getattr(e, 'filename', None),
+                }
+            return e
+        
+        events = [_to_dict(e) for e in events]
+        
         # Sort by timestamp if available
-        events = sorted(events, key=lambda e: e.get('timestamp', 0))
+        events = sorted(events, key=lambda e: e.get('timestamp') or 0)
         
         # Track call sequences
         for i, event in enumerate(events):
