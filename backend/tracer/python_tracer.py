@@ -275,6 +275,40 @@ def trace_python_file(source_path: str, project_root: Optional[str] = None) -> L
     
     try:
         runpy.run_path(str(file_path), run_name="__main__")
+    except SystemExit as e:
+        # Handle scripts that call sys.exit() - this is normal, not an error
+        print(f"⚠️ File {file_path} called sys.exit({e.code}) - skipping")
+        # Add a synthetic event to show the file was processed
+        fname = str(file_path)
+        events.append(TraceEvent(
+            id=f"{fname}:1:__exit__",
+            event="exit",
+            function="__sys_exit__",
+            filename=fname,
+            lineno=1,
+            code=f"# sys.exit({e.code})",
+            parent=None,
+            language="python",
+            reads=[],
+            writes=[],
+        ))
+    except KeyboardInterrupt:
+        # Handle keyboard interrupt - this is normal, not an error
+        print(f"⚠️ File {file_path} interrupted by user - skipping")
+        # Add a synthetic event to show the file was processed
+        fname = str(file_path)
+        events.append(TraceEvent(
+            id=f"{fname}:1:__interrupt__",
+            event="interrupt",
+            function="__user_interrupt__",
+            filename=fname,
+            lineno=1,
+            code=f"# User interrupt",
+            parent=None,
+            language="python",
+            reads=[],
+            writes=[],
+        ))
     except Exception as e:
         # Log error but don't crash - return partial trace if any
         print(f"⚠️ Error tracing {file_path}: {e}")

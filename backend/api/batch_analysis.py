@@ -184,8 +184,13 @@ class BatchAnalyzer:
         source_files = []
         for ext in ['.py']:
             source_files.extend(root_dir.rglob(f"*{ext}"))
-        # Skip __pycache__ and hidden files
-        source_files = [f for f in source_files if '__pycache__' not in str(f) and not f.name.startswith('.')]
+        # Skip __pycache__, hidden files, and virtual environments
+        skip_dirs = ['__pycache__', '.venv', 'venv', 'env', '.git', 'node_modules', 'site-packages', 'dist-packages']
+        source_files = [
+            f for f in source_files 
+            if not any(skip in str(f) for skip in skip_dirs) 
+            and not f.name.startswith('.')
+        ]
         return source_files
     
     def _generate_session_id(self) -> str:
