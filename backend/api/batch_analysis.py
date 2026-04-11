@@ -30,6 +30,7 @@ class BatchResult:
     files_analyzed: int
     total_events: int
     functions_found: List[str]
+    languages: List[str]
     causal_graph: Optional[CausalGraph]
     errors: List[str]
     processing_time_ms: float
@@ -237,11 +238,15 @@ class BatchAnalyzer:
             print(f"❌ Batch analysis error: {e}")
             traceback.print_exc()
         
+        # Debug: Show final counts
+        print(f"📊 FINAL RESULT: {files_analyzed} files, {len(all_functions)} functions, {len(all_events)} events")
+        
         return BatchResult(
             session_id=session_id,
             files_analyzed=files_analyzed,
             total_events=len(all_events),
             functions_found=list(all_functions),
+            languages=["python"],
             causal_graph=causal_graph,
             errors=errors,
             processing_time_ms=processing_time if 'processing_time' in locals() else (time.time() - start_time) * 1000
