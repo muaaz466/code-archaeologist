@@ -502,11 +502,24 @@ async def causal_discover(session_id: str, min_confidence: float = 0.3):
     """
     try:
         from backend.causal.causal_discovery import CausalDiscovery
+        from backend.api.batch_analysis import get_batch_analyzer
         
-        if session_id not in active_sessions:
+        session = None
+        
+        # Check in-memory sessions first
+        if session_id in active_sessions:
+            session = active_sessions[session_id]
+        else:
+            # Try to load from disk
+            analyzer = get_batch_analyzer()
+            session = analyzer._load_session(session_id)
+            if session:
+                # Add to active_sessions for future use
+                active_sessions[session_id] = session
+        
+        if not session:
             raise HTTPException(404, "Session not found")
         
-        session = active_sessions[session_id]
         events = session.get("events", [])
         
         if not events:
@@ -543,11 +556,22 @@ async def what_if_simulate(session_id: str, remove_function: str):
     try:
         from backend.causal.causal_discovery import CausalDiscovery
         from backend.causal.what_if_simulator import WhatIfSimulator
+        from backend.api.batch_analysis import get_batch_analyzer
         
-        if session_id not in active_sessions:
+        session = None
+        
+        # Check in-memory sessions first
+        if session_id in active_sessions:
+            session = active_sessions[session_id]
+        else:
+            # Try to load from disk
+            analyzer = get_batch_analyzer()
+            session = analyzer._load_session(session_id)
+            if session:
+                active_sessions[session_id] = session
+        
+        if not session:
             raise HTTPException(404, "Session not found")
-        
-        session = active_sessions[session_id]
         events = session.get("events", [])
         
         if not events:
@@ -577,19 +601,29 @@ async def what_if_simulate(session_id: str, remove_function: str):
     except Exception as e:
         raise HTTPException(500, f"Simulation failed: {str(e)}")
 
-@app.get("/score/{session_id}")
-async def get_score(session_id: str):
+@app.get("/score/calculate")
+async def calculate_score(session_id: str, benchmark: Optional[str] = "python"):
     """
-    Week 4: Get Code Archaeologist Score (maintainability benchmark)
+    Week 4: Calculate maintainability score
     """
     try:
-        from backend.causal.causal_discovery import CausalDiscovery
-        from backend.graph.score_benchmark import calculate_maintainability_score
+        from backend.graph.score_benchmark import ScoreBenchmark
+        from backend.api.batch_analysis import get_batch_analyzer
         
-        if session_id not in active_sessions:
+        session = None
+        
+        # Check in-memory sessions first
+        if session_id in active_sessions:
+            session = active_sessions[session_id]
+        else:
+            # Try to load from disk
+            analyzer = get_batch_analyzer()
+            session = analyzer._load_session(session_id)
+            if session:
+                active_sessions[session_id] = session
+        
+        if not session:
             raise HTTPException(404, "Session not found")
-        
-        session = active_sessions[session_id]
         events = session.get("events", [])
         functions = session.get("functions", [])
         
