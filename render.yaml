@@ -24,3 +24,18 @@ services:
     plan: free
     healthCheckPath: /health
     autoDeploy: true
+
+  - type: web
+    name: code-archaeologist-web
+    runtime: node
+    repo: https://github.com/muaaz466/code-archaeologist
+    branch: master
+    buildCommand: cd frontend/web && npm install && npm run build
+    startCommand: cd frontend/web && npx serve -s dist -l 3000
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: VITE_API_URL
+        value: https://code-archaeologist-7qxt.onrender.com
+    plan: free
+    autoDeploy: true
