@@ -219,16 +219,34 @@ class BatchAnalyzer:
                 
                 # Save session data
                 try:
-                    self._save_session(session_id, {
-                        'session_id': session_id,
-                        'project_name': project_name,
-                        'files_analyzed': files_analyzed,
-                        'functions': list(all_functions),
-                        'events': all_events,
-                        'causal_graph': causal_graph_json,
-                        'timestamp': datetime.now().isoformat(),
-                        'processing_time_ms': processing_time
-                    })
+                    events_as_dicts = []
+                    for event in all_events:
+                        if hasattr(event, 'function'):
+                            events_as_dicts.append({
+                                'id': event.id,
+                                'event': event.event,
+                                'function': event.function,
+                                'filename': event.filename,
+                                'lineno': event.lineno,
+                                'code': event.code,
+                                'parent': event.parent,
+                                'language': event.language,
+                                'reads': event.reads,
+                                'writes': event.writes
+                            })
+                        else:
+                            events_as_dicts.append(event)
+                
+                    session_data = {
+                        "session_id": session_id,
+                        "files_analyzed": files_analyzed,
+                        "functions": list(all_functions),
+                        "events": events_as_dicts,
+                        "languages": ["python"],
+                        "errors": errors,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    self._save_session(session_id, session_data)
                 except Exception as e:
                     errors.append(f"Failed to save session: {str(e)}")
                     print(f"⚠️ Session save error: {e}")
