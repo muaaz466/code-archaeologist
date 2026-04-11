@@ -66,13 +66,13 @@ export default function UploadTab({ apiUrl }) {
     <div className="space-y-6">
       {/* Upload Section */}
       <div className="card">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Upload size={20} className="text-primary-600" />
-          Upload Python File
-        </h2>
+        <div className="section-header">
+          <Upload size={24} className="text-[#6366f1]" />
+          <h2 className="section-title">Upload Python File</h2>
+        </div>
         
         <form onSubmit={handleUpload} className="space-y-4">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
+          <div className="drop-zone">
             <input
               type="file"
               accept=".py"
@@ -81,11 +81,11 @@ export default function UploadTab({ apiUrl }) {
               id="file-upload"
             />
             <label htmlFor="file-upload" className="cursor-pointer">
-              <FileCode size={48} className="mx-auto text-gray-400 mb-2" />
-              <p className="text-gray-600">
+              <FileCode size={64} className="mx-auto text-[#6366f1] mb-4" />
+              <p className="text-[#94a3b8] text-lg">
                 {file ? file.name : 'Click to upload or drag and drop'}
               </p>
-              <p className="text-sm text-gray-400">Python files only (.py)</p>
+              <p className="text-sm text-[#64748b] mt-2">Python files only (.py)</p>
             </label>
           </div>
           
@@ -100,16 +100,16 @@ export default function UploadTab({ apiUrl }) {
         </form>
 
         {error && (
-          <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-md flex items-center gap-2">
+          <div className="mt-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-2 text-red-300">
             <span className="text-xl">⚠️</span> {error}
           </div>
         )}
 
         {result && (
-          <div className="mt-4 p-4 bg-green-50 text-green-700 rounded-md">
-            <p className="font-medium">✅ Analysis Complete!</p>
-            <p className="text-sm mt-1">Session ID: {result.session_id}</p>
-            <p className="text-sm">Functions found: {result.functions?.length || 0}</p>
+          <div className="mt-4 p-4 bg-green-500/20 border border-green-500/30 rounded-xl">
+            <p className="font-semibold text-green-400">✅ Analysis Complete!</p>
+            <p className="text-sm text-[#94a3b8] mt-1">Session ID: {result.session_id}</p>
+            <p className="text-sm text-[#94a3b8]">Functions found: {result.functions?.length || 0}</p>
           </div>
         )}
       </div>
@@ -117,14 +117,14 @@ export default function UploadTab({ apiUrl }) {
       {/* Query Section */}
       {result && (
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Search size={20} className="text-primary-600" />
-            Query Graph
-          </h2>
+          <div className="section-header">
+            <Search size={24} className="text-[#6366f1]" />
+            <h2 className="section-title">Query Graph</h2>
+          </div>
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#94a3b8] mb-2">
                 Available Functions
               </label>
               <select
@@ -150,13 +150,13 @@ export default function UploadTab({ apiUrl }) {
 
             {queryResult && !queryResult.error && (
               <div className="mt-4 space-y-3">
-                <div className="p-3 bg-blue-50 rounded-md">
-                  <p className="font-medium text-blue-900">Callers (incoming):</p>
-                  <p className="text-blue-700">{queryResult.callers?.join(', ') || 'None'}</p>
+                <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-xl">
+                  <p className="font-semibold text-blue-400">Callers (incoming):</p>
+                  <p className="text-[#94a3b8]">{queryResult.callers?.join(', ') || 'None'}</p>
                 </div>
-                <div className="p-3 bg-green-50 rounded-md">
-                  <p className="font-medium text-green-900">Callees (outgoing):</p>
-                  <p className="text-green-700">{queryResult.callees?.join(', ') || 'None'}</p>
+                <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-xl">
+                  <p className="font-semibold text-green-400">Callees (outgoing):</p>
+                  <p className="text-[#94a3b8]">{queryResult.callees?.join(', ') || 'None'}</p>
                 </div>
               </div>
             )}
@@ -167,10 +167,10 @@ export default function UploadTab({ apiUrl }) {
       {/* AI Explain Section */}
       {result && (
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Brain size={20} className="text-primary-600" />
-            AI Explanation
-          </h2>
+          <div className="section-header">
+            <Brain size={24} className="text-[#ec4899]" />
+            <h2 className="section-title">AI Explanation</h2>
+          </div>
           
           <div className="space-y-4">
             <select
@@ -194,14 +194,14 @@ export default function UploadTab({ apiUrl }) {
             </button>
 
             {explanation && !explanation.error && (
-              <div className="mt-4 p-4 bg-purple-50 rounded-md">
-                <h3 className="font-medium text-purple-900 mb-2">
+              <div className="mt-4 p-4 bg-[#ec4899]/20 border border-[#ec4899]/30 rounded-xl">
+                <h3 className="font-semibold text-[#ec4899] mb-2">
                   {explanation.function}
                 </h3>
-                <p className="text-purple-800">{explanation.explanation}</p>
+                <p className="text-[#94a3b8]">{explanation.explanation}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {explanation.tags?.map(tag => (
-                    <span key={tag} className="px-2 py-1 bg-purple-200 text-purple-800 text-xs rounded">
+                    <span key={tag} className="px-3 py-1 bg-[#ec4899]/30 text-[#ec4899] text-xs rounded-full">
                       {tag}
                     </span>
                   ))}
