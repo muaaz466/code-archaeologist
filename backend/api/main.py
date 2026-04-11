@@ -640,8 +640,9 @@ async def calculate_score(session_id: str, benchmark: Optional[str] = "python"):
         discovery.add_trace(events)
         graph = discovery.discover_causal_graph(min_confidence=0.2)
         
-        # Calculate score
-        score = calculate_maintainability_score(graph, functions)
+        # Calculate score using ScoreBenchmark
+        benchmark = ScoreBenchmark(benchmark)
+        score = benchmark.calculate_score(graph, functions)
         
         return {
             "session_id": session_id,
