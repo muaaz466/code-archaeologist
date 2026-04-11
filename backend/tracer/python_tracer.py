@@ -279,11 +279,12 @@ def trace_python_file(source_path: str, project_root: Optional[str] = None) -> L
         # Log error but don't crash - return partial trace if any
         print(f"⚠️ Error tracing {file_path}: {e}")
         # Add a synthetic event to show the file was attempted
+        fname = str(file_path)
         events.append(TraceEvent(
-            id=f"{filename}:1:__error__",
+            id=f"{fname}:1:__error__",
             event="error",
             function="__trace_error__",
-            filename=filename,
+            filename=fname,
             lineno=1,
             code=f"# Trace error: {str(e)[:100]}",
             parent=None,
