@@ -128,40 +128,40 @@ export default function BatchTab({ apiUrl }) {
 
           {result && (
             <div className="mt-6 space-y-4">
-              <div className="p-4 bg-green-50 text-green-700 rounded-md">
-                <p className="font-medium">✅ Batch Analysis Complete!</p>
-                <p className="text-sm mt-1">Session ID: {result.session_id}</p>
+              <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-xl">
+                <p className="font-semibold text-green-400">✅ Batch Analysis Complete!</p>
+                <p className="text-sm mt-1 text-[#94a3b8]">Session ID: {result.session_id}</p>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-blue-600">{result.summary?.total_files || 0}</p>
-                  <p className="text-xs text-blue-800">Files Analyzed</p>
+                <div className="stat-card card">
+                  <p className="stat-value">{result.files_analyzed || 0}</p>
+                  <p className="stat-label">Files Analyzed</p>
                 </div>
-                <div className="bg-green-50 p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-green-600">{result.summary?.total_functions || 0}</p>
-                  <p className="text-xs text-green-800">Functions</p>
+                <div className="stat-card card">
+                  <p className="stat-value">{(result.functions_found?.length || result.total_functions) || 0}</p>
+                  <p className="stat-label">Functions</p>
                 </div>
-                <div className="bg-purple-50 p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-purple-600">{result.summary?.total_events || 0}</p>
-                  <p className="text-xs text-purple-800">Trace Events</p>
+                <div className="stat-card card">
+                  <p className="stat-value">{result.total_events || 0}</p>
+                  <p className="stat-label">Trace Events</p>
                 </div>
-                <div className="bg-orange-50 p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-orange-600">{Object.keys(result.files_by_language || {}).length}</p>
-                  <p className="text-xs text-orange-800">Languages</p>
+                <div className="stat-card card">
+                  <p className="stat-value">{(result.languages?.length || 0)}</p>
+                  <p className="stat-label">Languages</p>
                 </div>
               </div>
 
-              {result.files_by_language && (
+              {result.languages && result.languages.length > 0 && (
                 <div>
-                  <h4 className="font-medium mb-2">Languages Detected</h4>
+                  <h4 className="font-medium mb-2 text-[#94a3b8]">Languages Detected</h4>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(result.files_by_language).map(([lang, count]) => (
+                    {result.languages.map((lang) => (
                       <span
                         key={lang}
-                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                        className="px-3 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-full text-sm"
                       >
-                        {lang}: {count} files
+                        {lang}
                       </span>
                     ))}
                   </div>
