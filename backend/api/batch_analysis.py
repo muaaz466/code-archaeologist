@@ -135,10 +135,13 @@ class BatchAnalyzer:
         
         # Build causal graph
         causal_graph = None
+        causal_graph_json = None
         if all_events:
             discovery = CausalDiscovery()
             discovery.add_trace(all_events)
             causal_graph = discovery.discover_causal_graph(min_confidence=0.2)
+            if causal_graph:
+                causal_graph_json = discovery.export_graph_json(causal_graph)
         
         processing_time = (time.time() - start_time) * 1000
         
@@ -149,7 +152,7 @@ class BatchAnalyzer:
             'files_analyzed': files_analyzed,
             'functions': list(all_functions),
             'events': all_events,
-            'causal_graph': causal_graph.export_graph_json(causal_graph) if causal_graph else None,
+            'causal_graph': causal_graph_json,
             'timestamp': datetime.now().isoformat(),
             'processing_time_ms': processing_time
         })
