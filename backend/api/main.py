@@ -158,7 +158,7 @@ async def health_check():
         import traceback
         raise HTTPException(500, f"Analysis failed: {str(e)}\n{traceback.format_exc()}")
 
-@app.post("/upload", response_model=AnalysisResponse)
+@app.post("/upload", response_model=AnalysisResponse, tags=["upload"])
 async def upload_and_analyze(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
