@@ -204,9 +204,11 @@ class BatchAnalyzer:
     
     def _save_session(self, session_id: str, data: Dict):
         """Save session data to file."""
+        self.sessions_dir.mkdir(parents=True, exist_ok=True)
         session_file = self.sessions_dir / f"{session_id}.json"
         with open(session_file, 'w') as f:
             json.dump(data, f, default=str, indent=2)
+        print(f"💾 Session saved: {session_file}")
 
 
 # Singleton instance
