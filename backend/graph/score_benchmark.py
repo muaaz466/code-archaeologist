@@ -11,7 +11,7 @@ Computes maintainability metrics in C++ backend:
 Shows score in UI.
 """
 
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Tuple
 from dataclasses import dataclass
 from collections import defaultdict
 import math
