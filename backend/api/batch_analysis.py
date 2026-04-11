@@ -203,3 +203,8 @@ class BatchAnalyzer:
 
 # Singleton instance
 batch_analyzer = BatchAnalyzer()
+
+
+def get_batch_analyzer():
+    """Get the singleton batch analyzer instance."""
+    return batch_analyzer
