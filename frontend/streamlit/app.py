@@ -422,7 +422,7 @@ if st.session_state.get('current_graph') is not None:
     graph = st.session_state['current_graph']
     is_project = st.session_state.get('current_mode') == 'project'
     
-    query_tabs = st.tabs(["Functions", "Dependencies", "Impact Analysis", "Dead Code", "Raw Data"])
+    query_tabs = st.tabs(["Functions", "Dependencies", "Impact Analysis", "Dead Code", "Data Flow", "Raw Data"])
     
     with query_tabs[0]:  # Functions
         funcs = list_functions(graph)
@@ -496,14 +496,157 @@ if st.session_state.get('current_graph') is not None:
         else:
             st.success("All functions appear to be called")
     
-    with query_tabs[4]:  # Raw Data
+    with query_tabs[4]:  # Data Flow (Week 2)
+        st.subheader("🌊 Data Flow Analysis")
+        st.caption("Week 2 Feature: Track variable reads and writes across functions")
+        
+        # Get events from session to extract variables
+        events = st.session_state.get('current_events', [])
+        
+        # Debug: Show first event structure
+        if events and st.checkbox("Debug: Show first event structure"):
+            first_event = events[0]
+            st.write(f"Event type: {type(first_event)}")
+            if hasattr(first_event, '__dict__'):
+                st.json(first_event.__dict__)
+            elif isinstance(first_event, dict):
+                st.json(first_event)
+            else:
+                st.write(str(first_event))
+        
+        # Debug: Show all events with reads/writes
+        if events and st.checkbox("Debug: Show events with variables"):
+            var_events = [e for e in events if (hasattr(e, 'reads') and e.reads) or (hasattr(e, 'writes') and e.writes)]
+            st.write(f"Found {len(var_events)} events with variables out of {len(events)} total")
+            for e in var_events[:10]:
+                st.write(f"Line {e.lineno}: {e.code}")
+                st.write(f"  reads={e.reads}, writes={e.writes}")
+        
+        # Debug: Show ALL events to verify data structure
+        if events and st.checkbox("Debug: Show ALL events"):
+            st.write(f"Total events: {len(events)}")
+            for i, e in enumerate(events[:5]):
+                st.write(f"Event {i}: Line {e.lineno if hasattr(e, 'lineno') else 'N/A'}")
+                st.write(f"  function={e.function if hasattr(e, 'function') else 'N/A'}")
+                st.write(f"  reads={e.reads if hasattr(e, 'reads') else 'N/A'}")
+                st.write(f"  writes={e.writes if hasattr(e, 'writes') else 'N/A'}")
+        
+        # Extract all variables from events
+        all_variables = set()
+        for e in events:
+            if hasattr(e, 'reads') and e.reads:
+                all_variables.update(e.reads)
+            if hasattr(e, 'writes') and e.writes:
+                all_variables.update(e.writes)
+        
+        if all_variables:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**🔵 Variable Writers** - Functions that WRITE to variables")
+                var_write = st.selectbox("Select variable", sorted(all_variables), key="var_write")
+                
+                # Search in events for writers
+                writers = set()
+                for e in events:
+                    if hasattr(e, 'writes') and e.writes and var_write in e.writes:
+                        writers.add(e.function)
+                if writers:
+                    for func in writers:
+                        st.markdown(f"� `{func}`")
+                else:
+                    st.info(f"No functions write to '{var_write}'")
+            
+            with col2:
+                st.markdown("**🟠 Variable Readers** - Functions that READ from variables")
+                var_read = st.selectbox("Select variable", sorted(all_variables), key="var_read")
+                
+                # Search in events for readers
+                readers = set()
+                for e in events:
+                    if hasattr(e, 'reads') and e.reads and var_read in e.reads:
+                        readers.add(e.function)
+                if readers:
+                    for func in readers:
+                        st.markdown(f"🔵 `{func}`")
+                else:
+                    st.info(f"No functions read from '{var_read}'")
+            
+            # Data Flow Path
+            st.divider()
+            st.subheader("🔗 Data Flow Path")
+            col3, col4 = st.columns(2)
+            with col3:
+                start_var = st.selectbox("From variable (source)", sorted(all_variables), key="start_var")
+            with col4:
+                end_var = st.selectbox("To variable (destination)", sorted(all_variables), key="end_var")
+            
+            if st.button("Find Data Flow Path", type="primary"):
+                # Find all functions that touch the variables
+                start_writers = set()
+                start_readers = set()
+                end_writers = set()
+                end_readers = set()
+                
+                for e in events:
+                    if hasattr(e, 'writes') and e.writes:
+                        if start_var in e.writes:
+                            start_writers.add(e.function)
+                        if end_var in e.writes:
+                            end_writers.add(e.function)
+                    if hasattr(e, 'reads') and e.reads:
+                        if start_var in e.reads:
+                            start_readers.add(e.function)
+                        if end_var in e.reads:
+                            end_readers.add(e.function)
+                
+                # Use C++ graph if available
+                if hasattr(graph, 'find_data_path') and start_var and end_var:
+                    try:
+                        paths = graph.find_data_path(start_var, end_var)
+                        if paths:
+                            st.success(f"Found {len(paths)} data flow path(s):")
+                            for p in paths:
+                                st.write(f"  → {p}")
+                    except Exception as e:
+                        st.write(f"C++ path query error: {e}")
+                
+                # Check for direct data flow (same function writes start and reads end)
+                direct_flow = start_writers & end_readers
+                
+                if direct_flow:
+                    st.success(f"✅ Direct data flow found: `{start_var}` → {direct_flow} → `{end_var}`")
+                elif start_writers and end_readers:
+                    st.info(f"📊 Data flow analysis:")
+                    st.markdown(f"**`{start_var}`** is written by: {start_writers}")
+                    st.markdown(f"**`{end_var}`** is read by: {end_readers}")
+                    
+                    # Check for intermediate connection
+                    intermediate = start_readers & end_writers
+                    if intermediate:
+                        st.success(f"✅ Multi-hop flow: `{start_var}` → {intermediate} → `{end_var}`")
+                    else:
+                        st.warning(f"⚠️ No direct connection found")
+                else:
+                    st.warning(f"❌ No data flow path found from '{start_var}' to '{end_var}'")
+        else:
+            st.info("No variables detected in the trace. Try tracing code with variable assignments.")
+            st.markdown("""
+            **Example code to trace:**
+            ```python
+            def process():
+                x = 1      # write x
+                y = x + 2  # read x, write y
+                return y   # read y
+            ```
+            """)
+    
+    with query_tabs[5]:  # Raw Data
         if st.checkbox("Show graph summary"):
             st.json(graph_summary(graph))
         
         if st.checkbox("Show file list") and 'current_files' in st.session_state:
             st.json(st.session_state['current_files'])
-
-# Footer
 st.divider()
 footer_cols = st.columns([1, 1, 1])
 footer_cols[0].caption("Code Archaeologist MVP")

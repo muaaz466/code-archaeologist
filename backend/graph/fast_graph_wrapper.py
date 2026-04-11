@@ -93,6 +93,19 @@ class FastGraphWrapper:
         # get_edge_count
         self.lib.get_edge_count.argtypes = [ctypes.c_void_p]
         self.lib.get_edge_count.restype = ctypes.c_size_t
+        
+        # ===== DATA FLOW FUNCTIONS (Week 2) =====
+        # get_functions_that_write_to_variable
+        self.lib.get_functions_that_write_to_variable.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t)]
+        self.lib.get_functions_that_write_to_variable.restype = ctypes.POINTER(ctypes.c_char_p)
+        
+        # get_functions_that_read_from_variable
+        self.lib.get_functions_that_read_from_variable.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t)]
+        self.lib.get_functions_that_read_from_variable.restype = ctypes.POINTER(ctypes.c_char_p)
+        
+        # find_data_path
+        self.lib.find_data_path.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.POINTER(ctypes.c_size_t))]
+        self.lib.find_data_path.restype = ctypes.POINTER(ctypes.c_char_p)
 
     def build_graph(self, events: List[TraceEvent]) -> Optional['FastGraphHandle']:
         """Build graph from trace events"""
@@ -169,18 +182,54 @@ class FastGraphWrapper:
 class FastGraphHandle:
     """Handle to a C++ graph instance"""
 
-    def __init__(self, ptr: int, lib: ctypes.CDLL):
+    def __init__(self, ptr: int = 0, lib: ctypes.CDLL = None):
         self.ptr = ptr
         self.lib = lib
+        # Fallback mode when no C++ engine
+        self._fallback_nodes = 0
+        self._fallback_edges = 0
+        self._functions = set()
 
     def __del__(self):
         if self.ptr and self.lib:
-            self.lib.delete_graph(self.ptr)
+            try:
+                self.lib.delete_graph(self.ptr)
+            except:
+                pass
+
+    def add_node(self, node_id: str, attrs: dict = None):
+        """Add node to graph (fallback when no C++ engine)"""
+        if not self.ptr or not self.lib:
+            self._fallback_nodes += 1
+            if attrs and 'function' in attrs:
+                self._functions.add(attrs['function'])
+            return True
+        # C++ implementation would go here
+        return True
+    
+    def add_edge(self, from_node: str, to_node: str):
+        """Add edge to graph (fallback)"""
+        if not self.ptr or not self.lib:
+            self._fallback_edges += 1
+            return True
+        return True
+
+    def number_of_nodes(self) -> int:
+        """Get node count"""
+        if not self.ptr or not self.lib:
+            return self._fallback_nodes
+        return 0
+    
+    def number_of_edges(self) -> int:
+        """Get edge count"""
+        if not self.ptr or not self.lib:
+            return self._fallback_edges
+        return 0
 
     def list_functions(self) -> List[str]:
         """Get list of functions in the graph"""
         if not self.ptr or not self.lib:
-            return []
+            return list(self._functions)
 
         count = ctypes.c_size_t()
         result_ptr = self.lib.get_functions(self.ptr, ctypes.byref(count))
@@ -248,6 +297,79 @@ class FastGraphHandle:
         nodes = self.lib.get_node_count(self.ptr)
         edges = self.lib.get_edge_count(self.ptr)
         return (nodes, edges)
+    
+    def number_of_nodes(self) -> int:
+        """Get number of nodes (for NetworkX compatibility)"""
+        return self.get_stats()[0]
+    
+    def number_of_edges(self) -> int:
+        """Get number of edges (for NetworkX compatibility)"""
+        return self.get_stats()[1]
+
+    # ===== DATA FLOW QUERIES (Week 2) =====
+
+    def get_functions_that_write_to_variable(self, var_name: str) -> List[str]:
+        """Get functions that write to a specific variable"""
+        if not self.ptr or not self.lib:
+            return []
+        
+        count = ctypes.c_size_t()
+        result_ptr = self.lib.get_functions_that_write_to_variable(
+            self.ptr, var_name.encode('utf-8'), ctypes.byref(count)
+        )
+        if not result_ptr:
+            return []
+        
+        functions = [result_ptr[i].decode('utf-8') for i in range(count.value)]
+        self.lib.free_string_array(result_ptr, count.value)
+        return functions
+    
+    def get_functions_that_read_from_variable(self, var_name: str) -> List[str]:
+        """Get functions that read from a specific variable"""
+        if not self.ptr or not self.lib:
+            return []
+        
+        count = ctypes.c_size_t()
+        result_ptr = self.lib.get_functions_that_read_from_variable(
+            self.ptr, var_name.encode('utf-8'), ctypes.byref(count)
+        )
+        if not result_ptr:
+            return []
+        
+        functions = [result_ptr[i].decode('utf-8') for i in range(count.value)]
+        self.lib.free_string_array(result_ptr, count.value)
+        return functions
+    
+    def find_data_path(self, start_var: str, end_var: str) -> List[List[str]]:
+        """Find data flow path from start variable to end variable"""
+        if not self.ptr or not self.lib:
+            return []
+        
+        path_count = ctypes.c_size_t()
+        path_lengths_ptr = ctypes.POINTER(ctypes.c_size_t)()
+        
+        result_ptr = self.lib.find_data_path(
+            self.ptr, start_var.encode('utf-8'), end_var.encode('utf-8'),
+            ctypes.byref(path_count), ctypes.byref(path_lengths_ptr)
+        )
+        
+        if not result_ptr or path_count.value == 0:
+            return []
+        
+        # Reconstruct paths from flattened result
+        paths = []
+        idx = 0
+        for i in range(path_count.value):
+            path_length = path_lengths_ptr[i]
+            path = [result_ptr[idx + j].decode('utf-8') for j in range(path_length)]
+            paths.append(path)
+            idx += path_length
+        
+        # Free C arrays
+        self.lib.free_string_array(result_ptr, idx)
+        # Note: path_lengths memory should also be freed by the C++ code
+        
+        return paths
 
 # Global instance
 _fast_graph = FastGraphWrapper()

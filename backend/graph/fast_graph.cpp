@@ -12,6 +12,14 @@
 // Fast C++ implementation of graph operations for Code Archaeologist
 // This provides high-performance graph building and queries
 
+// DLL Export macro for Windows
+#ifdef _WIN32
+    #define DLL_EXPORT __declspec(dllexport)
+#else
+    #define DLL_EXPORT
+#endif
+
+// Trace event structure matching Python
 struct TraceEvent {
     const char* id;
     const char* event;
@@ -236,6 +244,151 @@ public:
         return {nodes, edges};
     }
 
+    // ===== DATA FLOW QUERIES (Week 2) =====
+
+    // Find all functions that write to a specific variable
+    std::vector<std::string> get_functions_that_write_to_variable(const std::string& var_name) const {
+        std::vector<std::string> functions;
+        for (const auto& [node_id, attrs] : node_attrs) {
+            auto type_it = attrs.find("type");
+            if (type_it == attrs.end() || type_it->second != "variable") continue;
+
+            auto name_it = attrs.find("name");
+            if (name_it == attrs.end() || name_it->second != var_name) continue;
+
+            // This is the variable node, find functions that write to it
+            for (const auto& [func_id, func_neighbors] : adj_list) {
+                if (func_neighbors.find(node_id) != func_neighbors.end()) {
+                    // Check if this is a "write" edge
+                    auto edge_type_it = edge_attrs.find(func_id + "->" + node_id);
+                    if (edge_type_it != edge_attrs.end()) {
+                        auto edge_type = edge_type_it->second.find("type");
+                        if (edge_type != edge_type_it->second.end() && edge_type->second == "write") {
+                            auto func_name_it = node_attrs.find(func_id);
+                            if (func_name_it != node_attrs.end()) {
+                                auto func_attr = func_name_it->second.find("function");
+                                if (func_attr != func_name_it->second.end() && !func_attr->second.empty()) {
+                                    functions.push_back(func_attr->second);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        std::sort(functions.begin(), functions.end());
+        auto last = std::unique(functions.begin(), functions.end());
+        functions.erase(last, functions.end());
+        return functions;
+    }
+
+    // Find all functions that read from a specific variable
+    std::vector<std::string> get_functions_that_read_from_variable(const std::string& var_name) const {
+        std::vector<std::string> functions;
+        for (const auto& [node_id, attrs] : node_attrs) {
+            auto type_it = attrs.find("type");
+            if (type_it == attrs.end() || type_it->second != "variable") continue;
+
+            auto name_it = attrs.find("name");
+            if (name_it == attrs.end() || name_it->second != var_name) continue;
+
+            // This is the variable node, find functions that read from it
+            for (const auto& [func_id, func_neighbors] : adj_list) {
+                if (func_neighbors.find(node_id) != func_neighbors.end()) {
+                    // Check if this is a "read" edge
+                    auto edge_type_it = edge_attrs.find(func_id + "->" + node_id);
+                    if (edge_type_it != edge_attrs.end()) {
+                        auto edge_type = edge_type_it->second.find("type");
+                        if (edge_type != edge_type_it->second.end() && edge_type->second == "read") {
+                            auto func_name_it = node_attrs.find(func_id);
+                            if (func_name_it != node_attrs.end()) {
+                                auto func_attr = func_name_it->second.find("function");
+                                if (func_attr != func_name_it->second.end() && !func_attr->second.empty()) {
+                                    functions.push_back(func_attr->second);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        std::sort(functions.begin(), functions.end());
+        auto last = std::unique(functions.begin(), functions.end());
+        functions.erase(last, functions.end());
+        return functions;
+    }
+
+    // Find data path from input variable to output variable
+    std::vector<std::vector<std::string>> find_data_path(const std::string& start_var, const std::string& end_var, int max_depth = 10) const {
+        std::vector<std::vector<std::string>> paths;
+
+        // Find start and end variable nodes
+        std::string start_node, end_node;
+        for (const auto& [node_id, attrs] : node_attrs) {
+            auto type_it = attrs.find("type");
+            if (type_it == attrs.end() || type_it->second != "variable") continue;
+
+            auto name_it = attrs.find("name");
+            if (name_it != attrs.end()) {
+                if (name_it->second == start_var) start_node = node_id;
+                if (name_it->second == end_var) end_node = node_id;
+            }
+        }
+
+        if (start_node.empty() || end_node.empty()) return paths;
+
+        // BFS to find paths through functions
+        std::queue<std::pair<std::vector<std::string>, int>> q;
+        q.push({{start_node}, 0});
+        std::unordered_set<std::string> visited;
+
+        while (!q.empty() && paths.size() < 100) {
+            auto [current_path, depth] = q.front();
+            q.pop();
+
+            if (depth > max_depth) continue;
+
+            std::string current = current_path.back();
+
+            if (current == end_node) {
+                // Convert node IDs to readable names
+                std::vector<std::string> readable_path;
+                for (const auto& node : current_path) {
+                    auto it = node_attrs.find(node);
+                    if (it != node_attrs.end()) {
+                        auto name_it = it->second.find("name");
+                        auto func_it = it->second.find("function");
+                        if (name_it != it->second.end()) {
+                            readable_path.push_back(name_it->second);
+                        } else if (func_it != it->second.end()) {
+                            readable_path.push_back(func_it->second);
+                        } else {
+                            readable_path.push_back(node);
+                        }
+                    } else {
+                        readable_path.push_back(node);
+                    }
+                }
+                paths.push_back(readable_path);
+                continue;
+            }
+
+            if (visited.find(current) != visited.end()) continue;
+            visited.insert(current);
+
+            auto adj_it = adj_list.find(current);
+            if (adj_it != adj_list.end()) {
+                for (const auto& neighbor : adj_it->second) {
+                    std::vector<std::string> new_path = current_path;
+                    new_path.push_back(neighbor);
+                    q.push({new_path, depth + 1});
+                }
+            }
+        }
+
+        return paths;
+    }
+
     // Build graph from trace events
     static std::unique_ptr<FastGraph> build_from_events(const std::vector<TraceEvent>& events) {
         auto graph = std::make_unique<FastGraph>();
@@ -282,12 +435,12 @@ public:
 
 // C interface for Python integration
 extern "C" {
-    FastGraph* create_graph(const TraceEvent* events, size_t count) {
+    DLL_EXPORT FastGraph* create_graph(const TraceEvent* events, size_t count) {
         std::vector<TraceEvent> event_vec(events, events + count);
         return FastGraph::build_from_events(event_vec).release();
     }
 
-    void delete_graph(FastGraph* graph) {
+    DLL_EXPORT void delete_graph(FastGraph* graph) {
         delete graph;
     }
 
@@ -301,38 +454,81 @@ extern "C" {
         return result;
     }
 
-    char** get_functions(FastGraph* graph, size_t* count) {
+    DLL_EXPORT char** get_functions(FastGraph* graph, size_t* count) {
         auto functions = graph->list_functions();
         return allocate_string_array(functions, count);
     }
 
-    char** get_callers(FastGraph* graph, const char* function_name, size_t* count) {
+    DLL_EXPORT char** get_callers(FastGraph* graph, const char* function_name, size_t* count) {
         auto callers = graph->get_callers(function_name ? function_name : "");
         return allocate_string_array(callers, count);
     }
 
-    char** get_callees(FastGraph* graph, const char* function_name, size_t* count) {
+    DLL_EXPORT char** get_callees(FastGraph* graph, const char* function_name, size_t* count) {
         auto callees = graph->get_callees(function_name ? function_name : "");
         return allocate_string_array(callees, count);
     }
 
-    char** get_affected(FastGraph* graph, const char* function_name, size_t* count) {
+    DLL_EXPORT char** get_affected(FastGraph* graph, const char* function_name, size_t* count) {
         auto affected = graph->get_affected(function_name ? function_name : "");
         return allocate_string_array(affected, count);
     }
 
-    void free_string_array(char** arr, size_t count) {
+    DLL_EXPORT void free_string_array(char** arr, size_t count) {
         for (size_t i = 0; i < count; ++i) {
             delete[] arr[i];
         }
         delete[] arr;
     }
 
-    size_t get_node_count(FastGraph* graph) {
+    DLL_EXPORT size_t get_node_count(FastGraph* graph) {
         return graph->get_stats().first;
     }
 
-    size_t get_edge_count(FastGraph* graph) {
+    DLL_EXPORT size_t get_edge_count(FastGraph* graph) {
         return graph->get_stats().second;
+    }
+
+    // ===== DATA FLOW C INTERFACE (Week 2) =====
+    DLL_EXPORT char** get_functions_that_write_to_variable(FastGraph* graph, const char* var_name, size_t* count) {
+        auto functions = graph->get_functions_that_write_to_variable(var_name ? var_name : "");
+        return allocate_string_array(functions, count);
+    }
+    
+    DLL_EXPORT char** get_functions_that_read_from_variable(FastGraph* graph, const char* var_name, size_t* count) {
+        auto functions = graph->get_functions_that_read_from_variable(var_name ? var_name : "");
+        return allocate_string_array(functions, count);
+    }
+    
+    DLL_EXPORT char** find_data_path(FastGraph* graph, const char* start_var, const char* end_var, size_t* path_count, size_t** path_lengths) {
+        auto paths = graph->find_data_path(start_var ? start_var : "", end_var ? end_var : "", 10);
+        
+        *path_count = paths.size();
+        if (paths.empty()) {
+            *path_lengths = nullptr;
+            return nullptr;
+        }
+        
+        // Calculate total items
+        size_t total_items = 0;
+        for (const auto& path : paths) {
+            total_items += path.size();
+        }
+        
+        // Allocate result array (flattened)
+        char** result = new char*[total_items];
+        *path_lengths = new size_t[paths.size()];
+        
+        size_t idx = 0;
+        for (size_t i = 0; i < paths.size(); ++i) {
+            (*path_lengths)[i] = paths[i].size();
+            for (const auto& item : paths[i]) {
+                result[idx] = new char[item.size() + 1];
+                strcpy(result[idx], item.c_str());
+                ++idx;
+            }
+        }
+        
+        return result;
     }
 }

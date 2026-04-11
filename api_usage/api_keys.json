@@ -1,0 +1,12 @@
+[
+  {
+    "api_key": "ca_d4959b50f5d9cd657ac663817a5f65db",
+    "tier": "free",
+    "created_at": "2026-04-11T14:04:21.612378",
+    "total_calls": 0,
+    "total_cost": 0.0,
+    "free_calls_remaining": 1000,
+    "rate_limit_per_minute": 60,
+    "last_reset": "2026-04-11T14:04:21.612378"
+  }
+]

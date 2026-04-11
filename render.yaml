@@ -1,11 +1,14 @@
 services:
   - type: web
     name: code-archaeologist-api
-    runtime: docker
-    repo: https://github.com/yourusername/code-archaeologist
-    branch: main
-    dockerfilePath: ./Dockerfile
+    runtime: python
+    repo: https://github.com/muaaz466/code-archaeologist
+    branch: master
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
@@ -13,10 +16,11 @@ services:
       - key: SUPABASE_SERVICE_KEY
         sync: false
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
       - key: API_HOST
         value: 0.0.0.0
       - key: API_PORT
         value: 8000
     plan: free
     healthCheckPath: /health
+    autoDeploy: true

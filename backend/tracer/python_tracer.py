@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import linecache
+import re
 import runpy
 import sys
 from collections import defaultdict
@@ -17,6 +18,39 @@ try:
 except ImportError:
     HAS_FAST_AST = False
     fast_analyze_ast = None  # type: ignore
+
+
+def extract_vars_from_code(code_line: str) -> tuple[List[str], List[str]]:
+    """Simple regex-based variable extraction for reads/writes"""
+    if not code_line:
+        return [], []
+    
+    # Remove comments
+    code = code_line.split('#')[0].strip()
+    if not code:
+        return [], []
+    
+    reads = []
+    writes = []
+    
+    # Assignment pattern: var = ...
+    import re
+    assign_match = re.match(r'^(\w+)\s*=', code)
+    if assign_match:
+        writes.append(assign_match.group(1))
+    
+    # Extract all identifiers (potential reads)
+    keywords = {'def', 'class', 'if', 'else', 'elif', 'for', 'while', 'return', 
+                'import', 'from', 'as', 'try', 'except', 'finally', 'with',
+                'pass', 'break', 'continue', 'lambda', 'yield', 'raise', 'True', 
+                'False', 'None', 'and', 'or', 'not', 'in', 'is', 'print'}
+    
+    all_vars = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', code)
+    for var in all_vars:
+        if var not in keywords and var not in writes:
+            reads.append(var)
+    
+    return reads, writes
 
 
 def _should_skip_stdlib(filename: str, func_name: str) -> bool:
@@ -171,9 +205,13 @@ def trace_python_file(source_path: str, project_root: Optional[str] = None) -> L
         filename = code.co_filename
         func_name = code.co_name
 
-        # Skip standard library
+        # Skip standard library - but allow <module> for line events (top-level code)
         if _should_skip_stdlib(filename, func_name):
-            return tracer
+            # Don't skip <module> for line events - that's where top-level code runs
+            if func_name == '<module>' and event == 'line':
+                pass  # Allow top-level code
+            else:
+                return tracer
             
         # Filter by project scope
         if project_path:
@@ -191,12 +229,27 @@ def trace_python_file(source_path: str, project_root: Optional[str] = None) -> L
         parent = frame.f_back
         reads: List[str] = []
         writes: List[str] = []
+        code_line = ""
         
         try:
             if Path(filename).exists():
-                reads = variable_map.get(frame.f_lineno, {}).get("reads", [])
-                writes = variable_map.get(frame.f_lineno, {}).get("writes", [])
-        except:
+                line_data = variable_map.get(frame.f_lineno, {})
+                reads = line_data.get("reads", [])
+                writes = line_data.get("writes", [])
+                code_line = linecache.getline(filename, frame.f_lineno).strip()
+                
+                # Debug output
+                if code_line and ('=' in code_line or 'return' in code_line):
+                    print(f"[TRACE] Line {frame.f_lineno}: '{code_line}'")
+                    print(f"[TRACE]   AST reads={reads}, writes={writes}")
+                
+                # Fallback: if AST extraction is empty, use regex-based extraction
+                if not reads and not writes and code_line:
+                    reads, writes = extract_vars_from_code(code_line)
+                    if reads or writes:
+                        print(f"[REGEX] Line {frame.f_lineno}: '{code_line}' -> reads={reads}, writes={writes}")
+        except Exception as e:
+            print(f"[ERROR] Variable extraction: {e}")
             pass
 
         event_data = TraceEvent(

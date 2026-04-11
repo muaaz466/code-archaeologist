@@ -44,16 +44,22 @@ public:
 };
 
 // C interface for Python ctypes integration
+#ifdef _WIN32
+    #define DLL_EXPORT __declspec(dllexport)
+#else
+    #define DLL_EXPORT
+#endif
+
 extern "C" {
-    FastGraph* create_graph(const TraceEvent* events, size_t count);
-    void delete_graph(FastGraph* graph);
-    char** get_functions(FastGraph* graph, size_t* count);
-    char** get_callers(FastGraph* graph, const char* function_name, size_t* count);
-    char** get_callees(FastGraph* graph, const char* function_name, size_t* count);
-    char** get_affected(FastGraph* graph, const char* function_name, size_t* count);
-    void free_string_array(char** arr, size_t count);
-    size_t get_node_count(FastGraph* graph);
-    size_t get_edge_count(FastGraph* graph);
+    DLL_EXPORT FastGraph* create_graph(const TraceEvent* events, size_t count);
+    DLL_EXPORT void delete_graph(FastGraph* graph);
+    DLL_EXPORT char** get_functions(FastGraph* graph, size_t* count);
+    DLL_EXPORT char** get_callers(FastGraph* graph, const char* function_name, size_t* count);
+    DLL_EXPORT char** get_callees(FastGraph* graph, const char* function_name, size_t* count);
+    DLL_EXPORT char** get_affected(FastGraph* graph, const char* function_name, size_t* count);
+    DLL_EXPORT void free_string_array(char** arr, size_t count);
+    DLL_EXPORT size_t get_node_count(FastGraph* graph);
+    DLL_EXPORT size_t get_edge_count(FastGraph* graph);
 }
 
 #endif // FAST_GRAPH_H
