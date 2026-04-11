@@ -16,7 +16,7 @@ export default function ScoreTab({ apiUrl }) {
     setResult(null)
 
     try {
-      const response = await axios.get(`${apiUrl}/score/${sessionId}`)
+      const response = await axios.get(`${apiUrl}/score/calculate?session_id=${sessionId}`)
       setResult(response.data)
     } catch (err) {
       setError(err.response?.data?.detail || err.message)
