@@ -9,6 +9,7 @@ import zipfile
 import io
 import os
 import tempfile
+import ast
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,7 +18,7 @@ from datetime import datetime
 import time
 import traceback
 
-from backend.tracer.python_tracer import trace_python_file
+from backend.tracer.python_tracer import trace_python_file, TraceEvent
 from backend.causal.causal_discovery import CausalDiscovery, CausalGraph
 from backend.causal.what_if_simulator import WhatIfSimulator
 
@@ -45,6 +46,46 @@ class ComparisonResult:
     new_dependencies: List[Dict]
     removed_dependencies: List[Dict]
     risk_assessment: Dict
+
+
+def extract_functions_from_ast(file_path: str) -> Tuple[List[str], List[TraceEvent]]:
+    """Extract function names using AST parsing - works even if file can't execute."""
+    functions = []
+    events = []
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            source = f.read()
+        
+        tree = ast.parse(source)
+        
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                func_name = node.name
+                if not func_name.startswith('_'):  # Skip private functions
+                    functions.append(func_name)
+                    
+                    # Create synthetic trace event for this function
+                    event = TraceEvent(
+                        id=f"{file_path}:{node.lineno}:{func_name}",
+                        event="call",
+                        function=func_name,
+                        filename=file_path,
+                        lineno=node.lineno,
+                        code=f"def {func_name}(...)",
+                        parent=None,
+                        language="python",
+                        reads=[],
+                        writes=[]
+                    )
+                    events.append(event)
+        
+        print(f"  📄 AST: Found {len(functions)} functions in {Path(file_path).name}")
+                
+    except Exception as e:
+        print(f"⚠️ AST parsing failed for {file_path}: {e}")
+    
+    return functions, events
 
 
 class BatchAnalyzer:
@@ -115,6 +156,7 @@ class BatchAnalyzer:
                 
                 for file_path in source_files:
                     events = []
+                    ast_functions = []
                     try:
                         # Trace the file
                         events = trace_python_file(str(file_path))
@@ -124,12 +166,20 @@ class BatchAnalyzer:
                         errors.append(error_msg)
                         print(f"⚠️ {error_msg}")
                     
+                    # If tracer found no events, use AST as fallback
+                    if not events:
+                        print(f"  🔍 Using AST fallback for {file_path}")
+                        ast_functions, ast_events = extract_functions_from_ast(str(file_path))
+                        if ast_events:
+                            events = ast_events
+                            print(f"  ✅ AST found {len(ast_functions)} functions")
+                    
                     # Count file and use events even if partial
                     if events:
                         all_events.extend(events)
                         files_analyzed += 1
                         
-                        # Extract function names
+                        # Extract function names from events
                         for event in events:
                             if event.function and not event.function.startswith('__'):
                                 all_functions.add(event.function)
