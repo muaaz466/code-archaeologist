@@ -33,12 +33,19 @@ class FastGraphWrapper:
         # Load the compiled C++ library
         lib_path = self._get_library_path()
         if lib_path and os.path.exists(lib_path):
-            self.lib = ctypes.CDLL(lib_path)
-            self._setup_function_signatures()
+            try:
+                self.lib = ctypes.CDLL(lib_path)
+                self._setup_function_signatures()
+                print(f"✅ Loaded C++ library: {lib_path}")
+            except OSError as e:
+                # DLL exists but can't load (wrong architecture, corrupt, etc.)
+                print(f"⚠️ Failed to load C++ library: {e}")
+                print("⚠️ Using Python fallback implementation")
+                self.lib = None
         else:
             # Fallback to Python implementation if C++ lib not available
             self.lib = None
-            print("Warning: C++ graph library not found, using Python fallback")
+            print("⚠️ C++ graph library not found, using Python fallback")
 
     def _get_library_path(self) -> Optional[str]:
         """Find the compiled C++ library"""
