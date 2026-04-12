@@ -4,7 +4,7 @@ Setup script for building C++ extensions with pybind11
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 from pybind11 import get_cmake_dir
 import pybind11
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 import sys
 import platform
 
@@ -21,7 +21,7 @@ else:  # Linux
 
 ext_modules = [
     Pybind11Extension(
-        "backend.graph.fast_graph",
+        "fast_graph",
         sources=[
             "backend/graph/cpp/bindings/graph_bindings.cpp",
             "backend/graph/cpp/src/fast_graph.cpp",
@@ -39,10 +39,10 @@ ext_modules = [
 setup(
     name="code-archaeologist",
     version="1.0.0",
-    author="Code Archaeologist Team",
     description="Fast C++ graph engine for code analysis",
     ext_modules=ext_modules,
     cmdclass={"build_ext": build_ext},
+    packages=find_packages(include=['backend', 'backend.*', 'cli']),
     zip_safe=False,
     python_requires=">=3.8",
 )
