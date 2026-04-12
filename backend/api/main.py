@@ -977,9 +977,38 @@ async def what_if_simulate(session_id: str, remove_function: str):
         discovery.add_trace(events)
         graph = discovery.discover_causal_graph(min_confidence=0.2)
         
-        # Run simulation
+        # Find matching node - function name might include signature
+        # Try exact match first, then partial match
+        target_node = None
+        if remove_function in graph.nodes:
+            target_node = remove_function
+        else:
+            # Try to match just function name (without signature)
+            func_name = remove_function.split('(')[0].strip()
+            for node in graph.nodes:
+                if node == func_name or node.endswith(f":{func_name}") or node.endswith(f"/{func_name}"):
+                    target_node = node
+                    break
+        
+        if not target_node:
+            # Return empty result if node not found
+            return {
+                "session_id": session_id,
+                "removed_function": remove_function,
+                "summary": {
+                    "affected_count": 0,
+                    "cascade_depth": 0,
+                    "total_break_probability": 0
+                },
+                "critical_path": [],
+                "affected_functions": [],
+                "alternative_paths": [],
+                "warning": f"Function '{remove_function}' not found in causal graph"
+            }
+        
+        # Run simulation with matched node
         simulator = WhatIfSimulator(graph)
-        result = simulator.simulate_removal(remove_function)
+        result = simulator.simulate_removal(target_node)
         
         return {
             "session_id": session_id,
