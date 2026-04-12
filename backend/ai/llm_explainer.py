@@ -93,10 +93,18 @@ class LLMFunctionExplainer:
             # Build prompt
             prompt = self._build_prompt(function_name, code_snippet, context, language)
             
-            # Call API (OpenAI or Groq)
-            kwargs = {
-                "model": self.model,
-                "messages": [
+            # Create client (OpenAI v1.0.0+ API)
+            if self.use_groq:
+                client = openai.OpenAI(
+                    api_key=self.api_key,
+                    base_url=self.api_base
+                )
+            else:
+                client = openai.OpenAI(api_key=self.api_key)
+            
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[
                     {
                         "role": "system",
                         "content": "You are a code analysis expert. Explain functions concisely."
@@ -105,14 +113,7 @@ class LLMFunctionExplainer:
                         "role": "user",
                         "content": prompt
                     }
-                ]
-            }
-            
-            if self.use_groq:
-                kwargs["api_base"] = self.api_base
-            
-            response = openai.ChatCompletion.create(
-                **kwargs,
+                ],
                 temperature=0.3,
                 max_tokens=500
             )
