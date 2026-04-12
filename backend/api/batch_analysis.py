@@ -114,6 +114,66 @@ class BatchAnalyzer:
         self.sessions_dir = Path(__file__).parent.parent.parent / "data" / "sessions"
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
     
+    def _analyze_source_file(self, file_path: str, language: str) -> list:
+        """Analyze non-Python source files using regex-based parsing."""
+        import re
+        
+        events = []
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+                lines = content.split('\n')
+            
+            if language == 'go':
+                # Go function pattern: func functionName(params)
+                pattern = re.compile(r'^\s*func\s+(?:\([^)]+\)\s+)?(\w+)\s*\(', re.MULTILINE)
+            elif language == 'cpp':
+                # C++ function pattern
+                pattern = re.compile(r'^(\s*)(\w+)\s*\(([^)]*)\)\s*\{', re.MULTILINE)
+            elif language == 'java':
+                # Java method pattern
+                pattern = re.compile(
+                    r'(?:public|private|protected|static|final)?\s*(\w+(?:<[^>]+>)?)\s+(\w+)\s*\(([^)]*)\)',
+                    re.MULTILINE
+                )
+            elif language == 'rust':
+                # Rust function pattern: fn function_name(params)
+                pattern = re.compile(r'^\s*fn\s+(\w+)\s*\(', re.MULTILINE)
+            else:
+                return events
+            
+            for i, line in enumerate(lines, 1):
+                stripped = line.strip()
+                
+                # Skip comments
+                if stripped.startswith('//') or stripped.startswith('/*') or stripped.startswith('*') or stripped.startswith('#'):
+                    continue
+                
+                match = pattern.search(line)
+                if match:
+                    func_name = match.group(1)
+                    
+                    # Skip keywords
+                    if func_name in ['if', 'for', 'while', 'switch', 'return', 'sizeof', 'catch', 'synchronized']:
+                        continue
+                    
+                    events.append({
+                        "id": f"{language}_{i}_{func_name}",
+                        "event": "call",
+                        "function": func_name,
+                        "filename": file_path,
+                        "lineno": i,
+                        "code": line.strip(),
+                        "language": language
+                    })
+            
+            return events
+            
+        except Exception as e:
+            print(f"⚠️ Error analyzing {file_path}: {e}")
+            return []
+    
     async def analyze_zip(
         self, 
         zip_bytes: bytes,
@@ -172,17 +232,27 @@ class BatchAnalyzer:
                 for file_path in source_files:
                     events = []
                     ast_functions = []
+                    file_ext = Path(file_path).suffix.lower()
+                    detected_lang = self.supported_extensions.get(file_ext, 'unknown')
+                    
                     try:
-                        # Trace the file
-                        events = trace_python_file(str(file_path))
-                        print(f"✅ Traced {file_path}: {len(events)} events")
+                        # Route to appropriate analyzer based on file type
+                        if detected_lang == 'python':
+                            events = trace_python_file(str(file_path))
+                            print(f"✅ Traced Python {file_path}: {len(events)} events")
+                        elif detected_lang in ['cpp', 'java', 'go', 'rust']:
+                            # Use regex-based static analysis for other languages
+                            events = self._analyze_source_file(str(file_path), detected_lang)
+                            print(f"✅ Analyzed {detected_lang.upper()} {file_path}: {len(events)} events")
+                        else:
+                            print(f"  ⚠️ Unsupported file type: {file_ext}")
                     except Exception as e:
-                        error_msg = f"Error tracing {file_path}: {str(e)}"
+                        error_msg = f"Error analyzing {file_path}: {str(e)}"
                         errors.append(error_msg)
                         print(f"⚠️ {error_msg}")
                     
-                    # If tracer found no events, use AST as fallback
-                    if not events:
+                    # If tracer found no events, use AST fallback for Python only
+                    if not events and detected_lang == 'python':
                         print(f"  🔍 Using AST fallback for {file_path}")
                         ast_functions, ast_events = extract_functions_from_ast(str(file_path))
                         if ast_events:
