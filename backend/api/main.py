@@ -704,10 +704,24 @@ async def export_pdf(session_id: str, background_tasks: BackgroundTasks):
         is_batch = session.get('is_batch', False)
         files_analyzed = session.get('files_analyzed', 1)
         
+        # Handle graph object - could be FastGraphHandle or dict
+        graph_obj = session.get('graph', {})
+        if hasattr(graph_obj, 'nodeCount'):
+            # FastGraphHandle object
+            node_count = graph_obj.nodeCount()
+            edge_count = graph_obj.edgeCount()
+        elif isinstance(graph_obj, dict):
+            # Dictionary format
+            node_count = len(graph_obj.get('nodes', []))
+            edge_count = len(graph_obj.get('edges', []))
+        else:
+            node_count = 0
+            edge_count = 0
+        
         graph_data = {
             'function_count': len(session.get('functions', [])),
-            'node_count': len(session.get('graph', {}).get('nodes', [])),
-            'edge_count': len(session.get('graph', {}).get('edges', [])),
+            'node_count': node_count,
+            'edge_count': edge_count,
             'languages': session.get('languages', ['python']),
             'functions': session.get('functions', []),
             'files_analyzed': files_analyzed,
