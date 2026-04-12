@@ -39,11 +39,22 @@ export default function UploadTab({ apiUrl }) {
     if (!queryFunction || !result?.session_id) return
     
     try {
-      const response = await axios.post(`${apiUrl}/query/${result.session_id}`, {
-        query_type: "callers",
-        target: queryFunction
+      // Query both callers and callees
+      const [callersRes, calleesRes] = await Promise.all([
+        axios.post(`${apiUrl}/query/${result.session_id}`, {
+          query_type: "callers",
+          target: queryFunction
+        }),
+        axios.post(`${apiUrl}/query/${result.session_id}`, {
+          query_type: "callees",
+          target: queryFunction
+        })
+      ])
+      
+      setQueryResult({
+        callers: callersRes.data,
+        callees: calleesRes.data
       })
-      setQueryResult(response.data)
     } catch (err) {
       setQueryResult({ error: err.response?.data?.detail || err.message })
     }
@@ -153,11 +164,11 @@ export default function UploadTab({ apiUrl }) {
               <div className="mt-4 space-y-3">
                 <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-xl">
                   <p className="font-semibold text-blue-400">Callers (incoming):</p>
-                  <p className="text-[#94a3b8]">{queryResult.callers?.join(', ') || 'None'}</p>
+                  <p className="text-[#94a3b8]">{queryResult.callers?.results?.join(', ') || 'None'}</p>
                 </div>
                 <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-xl">
                   <p className="font-semibold text-green-400">Callees (outgoing):</p>
-                  <p className="text-[#94a3b8]">{queryResult.callees?.join(', ') || 'None'}</p>
+                  <p className="text-[#94a3b8]">{queryResult.callees?.results?.join(', ') || 'None'}</p>
                 </div>
               </div>
             )}
