@@ -261,15 +261,20 @@ class BatchAnalyzer:
                         else:
                             print(f"  ❌ AST found no functions in {file_path}")
                     
-                    # Count file and use events even if partial
+                    # Count file if it was processed (even if 0 functions found)
+                    files_analyzed += 1
+                    detected_languages.add(detected_lang)
+                    
                     if events:
                         all_events.extend(events)
-                        files_analyzed += 1
+                        print(f"  📊 {file_path.name}: {len(events)} events, {len(ast_functions)} AST functions")
                         
                         # Extract function names from events
                         for event in events:
-                            if event.function and not event.function.startswith('__'):
+                            if hasattr(event, 'function'):
                                 all_functions.add(event.function)
+                            elif isinstance(event, dict) and 'function' in event:
+                                all_functions.add(event['function'])
                 
                 # Build causal graph
                 causal_graph = None
@@ -307,14 +312,18 @@ class BatchAnalyzer:
                         else:
                             events_as_dicts.append(event)
                 
+                    # Get actual languages detected (default to python if none)
+                    final_languages = list(detected_languages) if detected_languages else ["python"]
+                    
                     session_data = {
                         "session_id": session_id,
                         "files_analyzed": files_analyzed,
                         "functions": list(all_functions),
                         "events": events_as_dicts,
-                        "languages": ["python"],
+                        "languages": final_languages,
                         "errors": errors,
-                        "timestamp": datetime.now().isoformat()
+                        "timestamp": datetime.now().isoformat(),
+                        "is_batch": True
                     }
                     self._save_session(session_id, session_data)
                 except Exception as e:
@@ -331,12 +340,15 @@ class BatchAnalyzer:
         print(f"📊 FINAL RESULT: {files_analyzed} files, {len(all_functions)} functions, {len(all_events)} events")
         
         # Build result
+        # Get actual languages for result too
+        result_languages = list(detected_languages) if detected_languages else ["python"]
+        
         result = BatchResult(
             session_id=session_id,
             files_analyzed=files_analyzed,
             total_events=len(all_events),
             functions_found=list(all_functions),
-            languages=["python"],
+            languages=result_languages,
             causal_graph=causal_graph,
             errors=errors,
             processing_time_ms=processing_time if 'processing_time' in locals() else (time.time() - start_time) * 1000
