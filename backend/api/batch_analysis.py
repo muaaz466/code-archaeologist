@@ -190,6 +190,7 @@ class BatchAnalyzer:
         errors = []
         files_analyzed = 0
         causal_graph = None
+        detected_languages = set()
         
         try:
             # Extract and analyze
@@ -371,7 +372,9 @@ class BatchAnalyzer:
     def _find_source_files(self, root_dir: Path) -> List[Path]:
         """Find all source files in directory."""
         source_files = []
-        for ext in ['.py']:
+        # Support all languages: Python, C++, Java, Go, Rust
+        extensions = ['.py', '.cpp', '.java', '.go', '.rs']
+        for ext in extensions:
             source_files.extend(root_dir.rglob(f"*{ext}"))
         # Skip __pycache__, hidden files, and virtual environments
         skip_dirs = ['__pycache__', '.venv', 'venv', 'env', '.git', 'node_modules', 'site-packages', 'dist-packages']
