@@ -87,17 +87,17 @@ export default function UploadTab({ apiUrl }) {
           <div className="drop-zone">
             <input
               type="file"
-              accept=".py"
+              accept=".py,.cpp,.cc,.cxx,.java,.go,.rs"
               onChange={(e) => setFile(e.target.files[0])}
               className="hidden"
               id="file-upload"
             />
-            <label htmlFor="file-upload" className="cursor-pointer">
-              <FileCode size={64} className="mx-auto text-[#6366f1] mb-4" />
+            <label htmlFor="file-upload" className="cursor-pointer block">
+              <Upload className="w-12 h-12 text-[#38bdf8] mx-auto mb-4" />
               <p className="text-[#94a3b8] text-lg">
                 {file ? file.name : 'Click to upload or drag and drop'}
               </p>
-              <p className="text-sm text-[#64748b] mt-2">Python files only (.py)</p>
+              <p className="text-sm text-[#64748b] mt-2">Supports: Python (.py), C++ (.cpp/.cc/.cxx), Java (.java), Go (.go), Rust (.rs)</p>
             </label>
           </div>
           
