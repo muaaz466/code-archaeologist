@@ -40,7 +40,8 @@ export default function UploadTab({ apiUrl }) {
     
     try {
       const response = await axios.post(`${apiUrl}/query/${result.session_id}`, {
-        function_name: queryFunction
+        query_type: "callers",
+        target: queryFunction
       })
       setQueryResult(response.data)
     } catch (err) {
