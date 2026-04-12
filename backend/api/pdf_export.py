@@ -190,14 +190,27 @@ class PDFReportGenerator:
         elements.append(Paragraph("Executive Summary", self.styles['Heading1']))
         elements.append(Spacer(1, 0.2*inch))
         
+        # Check if batch analysis
+        is_batch = graph_data.get('is_batch', False)
+        files_analyzed = graph_data.get('files_analyzed', 1)
+        
         # Stats table
         stats = [
             ['Metric', 'Value'],
+        ]
+        
+        if is_batch:
+            stats.append(['Files Analyzed', str(files_analyzed)])
+            stats.append(['Batch Analysis', 'Yes'])
+        
+        stats.extend([
             ['Total Functions', str(graph_data.get('function_count', 0))],
             ['Call Graph Nodes', str(graph_data.get('node_count', 0))],
             ['Call Graph Edges', str(graph_data.get('edge_count', 0))],
+            ['Total Events', str(graph_data.get('total_events', 0))],
             ['Languages Detected', ', '.join(graph_data.get('languages', ['Python']))],
-        ]
+            ['Processing Time', f"{graph_data.get('processing_time_ms', 0)} ms"],
+        ])
         
         table = Table(stats, colWidths=[3*inch, 2*inch])
         table.setStyle(TableStyle([

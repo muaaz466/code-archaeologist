@@ -370,6 +370,68 @@ async def query_graph(session_id: str, request: QueryRequest):
         execution_time_ms=elapsed
     )
 
+@app.get("/export/pdf/{session_id}")
+async def export_pdf(session_id: str, background_tasks: BackgroundTasks):
+    """
+    Export analysis to PDF report
+    """
+    try:
+        from backend.api.pdf_export import PDFReportGenerator
+        
+        # Load session
+        session = None
+        if session_id in active_sessions:
+            session = active_sessions[session_id]
+        else:
+            from backend.api.batch_analysis import get_batch_analyzer
+            analyzer = get_batch_analyzer()
+            session = analyzer._load_session(session_id)
+        
+        if not session:
+            raise HTTPException(404, "Session not found")
+        
+        # Create temp file
+        temp_path = f"/tmp/report_{session_id}.pdf"
+        
+        # Generate report
+        generator = PDFReportGenerator(temp_path)
+        
+        # Handle batch vs single file data
+        is_batch = session.get('is_batch', False)
+        files_analyzed = session.get('files_analyzed', 1)
+        
+        graph_data = {
+            'function_count': len(session.get('functions', [])),
+            'node_count': len(session.get('graph', {}).get('nodes', [])),
+            'edge_count': len(session.get('graph', {}).get('edges', [])),
+            'languages': session.get('languages', ['python']),
+            'functions': session.get('functions', []),
+            'files_analyzed': files_analyzed,
+            'is_batch': is_batch,
+            'total_events': session.get('total_events', 0),
+            'processing_time_ms': session.get('processing_time_ms', 0)
+        }
+        
+        project_name = f"Batch Analysis ({files_analyzed} files)" if is_batch else f"Analysis {session_id}"
+        
+        generator.generate_report(
+            project_name=project_name,
+            graph_data=graph_data,
+            query_results=session.get('query_results', {}),
+            ai_explanations=session.get('ai_explanations', [])
+        )
+        
+        # Return file
+        return FileResponse(
+            temp_path,
+            media_type="application/pdf",
+            filename=f"code-archaeologist-{session_id}.pdf"
+        )
+        
+    except Exception as e:
+        raise HTTPException(500, f"PDF export failed: {str(e)}")
+
+
 @app.post("/explain")
 async def explain_function(request: LLMExplainRequest):
     """
@@ -416,15 +478,6 @@ async def explain_function(request: LLMExplainRequest):
             }
     except Exception as e:
         raise HTTPException(500, f"Explanation error: {str(e)}")
-
-@app.post("/export/pdf/{session_id}")
-async def export_pdf(session_id: str):
-    """
-    Week 3: Export analysis to PDF report
-    
-    Includes: graph, queries, AI explanations
-    """
-    # TODO: Implement with reportlab
     # For now, return placeholder info
     
     if session_id not in active_sessions:
