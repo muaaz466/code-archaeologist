@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Upload, FileCode, Loader2, Search, Brain, FileText } from 'lucide-react'
+import { Upload, FileCode, Loader2, Search, Brain, FileText, Download } from 'lucide-react'
 import axios from 'axios'
 
 export default function UploadTab({ apiUrl }) {
@@ -173,6 +173,39 @@ export default function UploadTab({ apiUrl }) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Analysis Summary */}
+      {result && (
+        <div className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-[#0f172a] rounded-lg border border-[#334155]">
+              <p className="text-sm text-[#94a3b8]">Functions</p>
+              <p className="text-xl font-bold text-[#38bdf8]">{result.functions?.length || 0}</p>
+            </div>
+            <div className="p-4 bg-[#0f172a] rounded-lg border border-[#334155]">
+              <p className="text-sm text-[#94a3b8]">Languages</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {(result.languages || ['python']).map(lang => (
+                  <span key={lang} className="px-2 py-0.5 bg-[#38bdf8]/20 text-[#38bdf8] text-xs rounded">
+                    {lang}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="p-4 bg-[#0f172a] rounded-lg border border-[#334155]">
+            <p className="text-sm text-[#94a3b8]">Session ID</p>
+            <p className="text-sm font-mono text-[#c084fc] truncate">{result.session_id}</p>
+          </div>
+          <button
+            onClick={() => window.open(`${apiUrl}/export/pdf/${result.session_id}`, '_blank')}
+            className="w-full btn-secondary flex items-center justify-center gap-2"
+          >
+            <Download size={18} />
+            Download PDF Report
+          </button>
         </div>
       )}
 
