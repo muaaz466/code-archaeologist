@@ -197,7 +197,7 @@ async def upload_and_analyze(
         if detected_lang == "python":
             result = await _analyze_python(temp_path, session_id)
         elif detected_lang == "cpp":
-            result = await _analyze_cpp_binary(temp_path, session_id)
+            result = await _analyze_cpp(temp_path, session_id)
         elif detected_lang == "java":
             result = await _analyze_java(temp_path, session_id)
         elif detected_lang == "go":
