@@ -213,7 +213,12 @@ async def upload_and_analyze(
             "graph": result.get("graph"),
             "events": result.get("events", []),
             "language": detected_lang,
-            "file": file.filename
+            "file": file.filename,
+            "functions": result.get("functions", []),
+            "nodes": result.get("nodes", 0),
+            "edges": result.get("edges", 0),
+            "total_events": len(result.get("events", [])),
+            "languages": [detected_lang] if isinstance(detected_lang, str) else detected_lang
         }
         
         return AnalysisResponse(
