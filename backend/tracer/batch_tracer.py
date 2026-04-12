@@ -126,3 +126,22 @@ def find_cross_file_dependencies(folder_path: str) -> List[Dict[str, str]]:
                         })
     
     return dependencies
+
+
+class BatchTracer:
+    """Batch tracer class for analyzing directories and ZIP files."""
+    
+    def analyze_batch(self, source_path: str):
+        """Analyze a directory or ZIP file."""
+        from backend.api.batch_analysis import get_batch_analyzer, BatchResult
+        import zipfile
+        
+        analyzer = get_batch_analyzer()
+        
+        if zipfile.is_zipfile(source_path):
+            result = analyzer.analyze_zip(source_path)
+        else:
+            # For directories, use the analyze_zip with the folder
+            result = analyzer.analyze_zip(source_path)
+        
+        return result
