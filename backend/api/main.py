@@ -256,54 +256,358 @@ async def _analyze_python(file_path: str, session_id: str) -> Dict:
         "functions": list(functions)
     }
 
-async def _analyze_cpp_binary(file_path: str, session_id: str) -> Dict:
-    """Analyze C++ binary using DWARF parser"""
-    # Week 3: Call C++ tracer
-    # For now, return placeholder
-    return {
-        "graph": FastGraphHandle(),
-        "events": [],
-        "nodes": 0,
-        "edges": 0,
-        "functions": [],
-        "note": "C++ binary analysis requires compilation with -g flag"
-    }
+async def _analyze_cpp(file_path: str, session_id: str) -> Dict:
+    """Analyze C++ source file using regex-based parser"""
+    import re
+    
+    functions = []
+    events = []
+    graph = FastGraphHandle()
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+            lines = content.split('\n')
+        
+        # Regex for C++ function detection
+        # Matches: return_type function_name(params) {
+        func_pattern = re.compile(
+            r'^(\s*)((?:const\s+|static\s+|virtual\s+|inline\s+|void\s+|int\s+|float\s+|double\s+|bool\s+|char\s+|string\s+|auto\s+|std::\w+\s+)*?)'
+            r'(\w+)\s*\(([^)]*)\)\s*(?:const\s*)?\{',
+            re.MULTILINE
+        )
+        
+        # Also match class methods
+        method_pattern = re.compile(
+            r'(\w+)::(\w+)\s*\(([^)]*)\)\s*(?:const\s*)?\{',
+            re.MULTILINE
+        )
+        
+        for i, line in enumerate(lines, 1):
+            # Skip comments and preprocessor
+            stripped = line.strip()
+            if stripped.startswith('//') or stripped.startswith('#') or stripped.startswith('/*'):
+                continue
+            
+            # Check for function definitions
+            match = func_pattern.search(line)
+            if match:
+                indent, return_type, func_name, params = match.groups()
+                if func_name not in ['if', 'for', 'while', 'switch', 'return', 'sizeof', 'decltype']:
+                    func_sig = f"{func_name}({params})"
+                    functions.append(func_sig)
+                    
+                    # Add node to graph
+                    node_id = f"{file_path}:{i}:{func_name}"
+                    graph.add_node(node_id, {
+                        "function": func_name,
+                        "file": file_path,
+                        "line": str(i),
+                        "signature": func_sig,
+                        "language": "cpp"
+                    })
+                    
+                    # Create trace event
+                    events.append({
+                        "id": f"cpp_{i}_{func_name}",
+                        "event": "call",
+                        "function": func_name,
+                        "filename": file_path,
+                        "lineno": i,
+                        "code": line.strip(),
+                        "language": "cpp"
+                    })
+        
+        # Also check for method definitions (ClassName::methodName)
+        for match in method_pattern.finditer(content):
+            class_name, method_name, params = match.groups()
+            func_sig = f"{class_name}::{method_name}({params})"
+            if func_sig not in functions:
+                functions.append(func_sig)
+        
+        return {
+            "graph": graph,
+            "events": events,
+            "nodes": len(functions),
+            "edges": 0,
+            "functions": functions,
+            "note": f"C++ source analysis: {len(functions)} functions found"
+        }
+    except Exception as e:
+        return {
+            "graph": graph,
+            "events": [],
+            "nodes": 0,
+            "edges": 0,
+            "functions": [],
+            "note": f"C++ analysis error: {str(e)}"
+        }
 
 async def _analyze_java(file_path: str, session_id: str) -> Dict:
-    """Analyze Java file using ByteBuddy agent"""
-    # Week 3: Java ByteBuddy integration
-    return {
-        "graph": FastGraphHandle(),
-        "events": [],
-        "nodes": 0,
-        "edges": 0,
-        "functions": [],
-        "note": "Java analysis requires ByteBuddy agent (Week 3)"
-    }
+    """Analyze Java source file using regex-based parser"""
+    import re
+    
+    functions = []
+    events = []
+    graph = FastGraphHandle()
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+            lines = content.split('\n')
+        
+        # Regex patterns for Java
+        # Matches: access_modifier return_type method_name(params) throws ... {
+        # Examples: public void main(String[] args) {, private int foo() {, void bar() {
+        method_pattern = re.compile(
+            r'^(\s*)((?:public|private|protected|static|final|abstract|synchronized)\s+)*'
+            r'(\w+(?:<[^>]+>)?)\s+(\w+)\s*\(([^)]*)\)',
+            re.MULTILINE
+        )
+        
+        # Constructor pattern: public ClassName(params) {
+        constructor_pattern = re.compile(
+            r'^(\s*)((?:public|private|protected)\s+)?(\w+)\s*\(([^)]*)\)\s*\{',
+            re.MULTILINE
+        )
+        
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+            
+            # Skip comments and imports
+            if stripped.startswith('//') or stripped.startswith('import') or stripped.startswith('package') or stripped.startswith('*') or stripped.startswith('/*'):
+                continue
+            
+            # Check for method definitions
+            match = method_pattern.search(line)
+            if match and '{' in line:
+                modifiers, return_type, method_name, params = match.groups()[1:]
+                if method_name not in ['if', 'for', 'while', 'switch', 'return', 'catch', 'synchronized']:
+                    func_sig = f"{method_name}({params})"
+                    functions.append(func_sig)
+                    
+                    node_id = f"{file_path}:{i}:{method_name}"
+                    graph.add_node(node_id, {
+                        "function": method_name,
+                        "file": file_path,
+                        "line": str(i),
+                        "signature": func_sig,
+                        "language": "java"
+                    })
+                    
+                    events.append({
+                        "id": f"java_{i}_{method_name}",
+                        "event": "call",
+                        "function": method_name,
+                        "filename": file_path,
+                        "lineno": i,
+                        "code": line.strip(),
+                        "language": "java"
+                    })
+        
+        # Check for constructors
+        for match in constructor_pattern.finditer(content):
+            indent, access, class_name, params = match.groups()
+            func_sig = f"{class_name}({params}) [constructor]"
+            if func_sig not in functions:
+                functions.append(func_sig)
+        
+        return {
+            "graph": graph,
+            "events": events,
+            "nodes": len(functions),
+            "edges": 0,
+            "functions": functions,
+            "note": f"Java source analysis: {len(functions)} methods found"
+        }
+    except Exception as e:
+        return {
+            "graph": graph,
+            "events": [],
+            "nodes": 0,
+            "edges": 0,
+            "functions": [],
+            "note": f"Java analysis error: {str(e)}"
+        }
 
 async def _analyze_go(file_path: str, session_id: str) -> Dict:
-    """Analyze Go binary"""
-    # Week 3: Go DWARF parsing
-    return {
-        "graph": FastGraphHandle(),
-        "events": [],
-        "nodes": 0,
-        "edges": 0,
-        "functions": [],
-        "note": "Go analysis requires compiled binary with debug symbols"
-    }
+    """Analyze Go source file using regex-based parser"""
+    import re
+    
+    functions = []
+    events = []
+    graph = FastGraphHandle()
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+            lines = content.split('\n')
+        
+        # Regex patterns for Go
+        # func functionName(params) returnType {
+        func_pattern = re.compile(
+            r'^func\s+(?:\([^)]+\)\s+)?(\w+)\s*\(([^)]*)\)(?:\s+\S+)?\s*\{',
+            re.MULTILINE
+        )
+        
+        # Method receiver: func (t Type) methodName(params)
+        method_pattern = re.compile(
+            r'^func\s+\(([^)]+)\)\s*(\w+)\s*\(([^)]*)\)(?:\s+\S+)?\s*\{',
+            re.MULTILINE
+        )
+        
+        # Find all function definitions
+        for i, line in enumerate(lines, 1):
+            # Check for regular functions
+            match = func_pattern.search(line)
+            if match:
+                func_name, params = match.groups()
+                func_sig = f"{func_name}({params})"
+                functions.append(func_sig)
+                
+                graph.add_node(f"{file_path}:{i}:{func_name}", {
+                    "function": func_name,
+                    "file": file_path,
+                    "line": str(i),
+                    "signature": func_sig,
+                    "language": "go"
+                })
+                
+                events.append({
+                    "id": f"go_{i}_{func_name}",
+                    "event": "call",
+                    "function": func_name,
+                    "filename": file_path,
+                    "lineno": i,
+                    "code": line.strip(),
+                    "language": "go"
+                })
+        
+        # Find methods
+        for match in method_pattern.finditer(content):
+            receiver, method_name, params = match.groups()
+            func_sig = f"({receiver}) {method_name}({params})"
+            if func_sig not in functions:
+                functions.append(func_sig)
+        
+        return {
+            "graph": graph,
+            "events": events,
+            "nodes": len(functions),
+            "edges": 0,
+            "functions": functions,
+            "note": f"Go source analysis: {len(functions)} functions found"
+        }
+    except Exception as e:
+        return {
+            "graph": graph,
+            "events": [],
+            "nodes": 0,
+            "edges": 0,
+            "functions": [],
+            "note": f"Go analysis error: {str(e)}"
+        }
 
 async def _analyze_rust(file_path: str, session_id: str) -> Dict:
-    """Analyze Rust binary"""
-    # Week 3: Rust DWARF parsing
-    return {
-        "graph": FastGraphHandle(),
-        "events": [],
-        "nodes": 0,
-        "edges": 0,
-        "functions": [],
-        "note": "Rust analysis requires compiled binary with debug symbols"
-    }
+    """Analyze Rust source file using regex-based parser"""
+    import re
+    
+    functions = []
+    events = []
+    graph = FastGraphHandle()
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+            lines = content.split('\n')
+        
+        # Regex patterns for Rust
+        # fn function_name(params) -> return_type {
+        # fn function_name(params) {
+        func_pattern = re.compile(
+            r'^\s*fn\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*\S+)?\s*\{',
+            re.MULTILINE
+        )
+        
+        # impl blocks: impl StructName { ... fn method_name(...) ... }
+        impl_pattern = re.compile(
+            r'impl\s+(?:\w+\s+for\s+)?(\w+)\s*\{',
+            re.MULTILINE
+        )
+        
+        # Find current impl context
+        current_impl = None
+        
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+            
+            # Skip comments
+            if stripped.startswith('//') or stripped.startswith('/*'):
+                continue
+            
+            # Check for impl start
+            impl_match = impl_pattern.search(line)
+            if impl_match:
+                current_impl = impl_match.group(1)
+                continue
+            
+            # Check for impl end (simple heuristic)
+            if '}' in line and current_impl:
+                current_impl = None
+                continue
+            
+            # Check for function definitions
+            match = func_pattern.search(line)
+            if match:
+                func_name, params = match.groups()
+                
+                # Skip keywords
+                if func_name in ['if', 'for', 'while', 'match', 'return', 'struct', 'enum', 'impl', 'fn']:
+                    continue
+                
+                if current_impl:
+                    func_sig = f"{current_impl}::{func_name}({params})"
+                else:
+                    func_sig = f"{func_name}({params})"
+                
+                functions.append(func_sig)
+                
+                graph.add_node(f"{file_path}:{i}:{func_name}", {
+                    "function": func_name,
+                    "file": file_path,
+                    "line": str(i),
+                    "signature": func_sig,
+                    "language": "rust",
+                    "impl": current_impl
+                })
+                
+                events.append({
+                    "id": f"rust_{i}_{func_name}",
+                    "event": "call",
+                    "function": func_name,
+                    "filename": file_path,
+                    "lineno": i,
+                    "code": line.strip(),
+                    "language": "rust"
+                })
+        
+        return {
+            "graph": graph,
+            "events": events,
+            "nodes": len(functions),
+            "edges": 0,
+            "functions": functions,
+            "note": f"Rust source analysis: {len(functions)} functions found"
+        }
+    except Exception as e:
+        return {
+            "graph": graph,
+            "events": [],
+            "nodes": 0,
+            "edges": 0,
+            "functions": [],
+            "note": f"Rust analysis error: {str(e)}"
+        }
 
 @app.post("/query/{session_id}", response_model=QueryResponse)
 async def query_graph(session_id: str, request: QueryRequest):
