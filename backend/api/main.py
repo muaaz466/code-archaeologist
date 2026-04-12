@@ -320,10 +320,20 @@ async def query_graph(session_id: str, request: QueryRequest):
     import time
     start = time.time()
     
-    if session_id not in active_sessions:
+    from backend.api.batch_analysis import get_batch_analyzer
+    
+    session = None
+    if session_id in active_sessions:
+        session = active_sessions[session_id]
+    else:
+        analyzer = get_batch_analyzer()
+        session = analyzer._load_session(session_id)
+        if session:
+            active_sessions[session_id] = session
+    
+    if not session:
         raise HTTPException(404, "Session not found")
     
-    session = active_sessions[session_id]
     graph = session.get("graph")
     events = session.get("events", [])
     
