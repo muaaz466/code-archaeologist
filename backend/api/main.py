@@ -381,7 +381,11 @@ async def explain_function(request: LLMExplainRequest):
         # Try to use LLM explainer if available
         try:
             from backend.ai.llm_explainer import LLMFunctionExplainer
-            explainer = LLMFunctionExplainer()
+            import os
+        
+            # Use Groq if API key is available, otherwise OpenAI
+            use_groq = bool(os.getenv('GROQ_API_KEY'))
+            explainer = LLMFunctionExplainer(use_groq=use_groq)
             
             result = explainer.explain_function(
                 function_name=request.function_name,

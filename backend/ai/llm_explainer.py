@@ -1,6 +1,6 @@
 """
 Code Archaeologist - LLM Function Explainer
-Week 3: AI-powered function documentation using GPT-3.5-Turbo
+Week 3: AI-powered function documentation using GPT-3.5-Turbo / Groq
 """
 
 import os
@@ -14,6 +14,9 @@ try:
     HAS_OPENAI = True
 except ImportError:
     HAS_OPENAI = False
+
+# Groq API base URL
+GROQ_API_BASE = "https://api.groq.com/openai/v1"
 
 
 @dataclass
@@ -36,22 +39,31 @@ class LLMFunctionExplainer:
     and extract key insights from code.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, use_groq: bool = False):
         """
         Initialize explainer
         
         Args:
-            api_key: OpenAI API key (or from OPENAI_API_KEY env var)
+            api_key: OpenAI/Groq API key (or from env var)
+            use_groq: Whether to use Groq API instead of OpenAI
         """
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
-        self.model = "gpt-3.5-turbo"
+        self.use_groq = use_groq
+        if use_groq:
+            self.api_key = api_key or os.getenv('GROQ_API_KEY')
+            self.model = "llama-3.1-8b-instant"  # Fast, cheap Groq model
+            self.api_base = GROQ_API_BASE
+        else:
+            self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+            self.model = "gpt-3.5-turbo"
+            self.api_base = None
+        
         self.has_openai = HAS_OPENAI
         
         if self.api_key and self.has_openai:
             openai.api_key = self.api_key
     
     def is_available(self) -> bool:
-        """Check if LLM is available"""
+        """Check if LLM is available (OpenAI or Groq)"""
         return self.has_openai and self.api_key is not None
     
     def explain_function(
@@ -81,10 +93,10 @@ class LLMFunctionExplainer:
             # Build prompt
             prompt = self._build_prompt(function_name, code_snippet, context, language)
             
-            # Call OpenAI API
-            response = openai.ChatCompletion.create(
-                model=self.model,
-                messages=[
+            # Call API (OpenAI or Groq)
+            kwargs = {
+                "model": self.model,
+                "messages": [
                     {
                         "role": "system",
                         "content": "You are a code analysis expert. Explain functions concisely."
@@ -93,7 +105,14 @@ class LLMFunctionExplainer:
                         "role": "user",
                         "content": prompt
                     }
-                ],
+                ]
+            }
+            
+            if self.use_groq:
+                kwargs["api_base"] = self.api_base
+            
+            response = openai.ChatCompletion.create(
+                **kwargs,
                 temperature=0.3,
                 max_tokens=500
             )
