@@ -14,36 +14,52 @@ export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysi
   const [error, setError] = useState(null)
   const [selectedLang, setSelectedLang] = useState('auto')
   const [uploadType, setUploadType] = useState('file') // 'file' or 'zip'
+  const [selectedFile, setSelectedFile] = useState(null)
 
-  const handleFileUpload = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files[0]
-    if (!file) return
+    if (file) {
+      setSelectedFile(file)
+      setError(null)
+    }
+  }
+
+  const handleAnalyze = async () => {
+    if (!selectedFile) {
+      setError('Please select a file first')
+      return
+    }
 
     setLoading(true)
     setError(null)
 
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', selectedFile)
     if (selectedLang !== 'auto') {
       formData.append('language', selectedLang)
     }
 
     try {
       const endpoint = uploadType === 'zip' ? '/batch/analyze' : '/upload'
+      console.log('Uploading to:', `${apiUrl}${endpoint}`)
+      
       const response = await fetch(`${apiUrl}${endpoint}`, {
         method: 'POST',
         body: formData,
       })
 
       const data = await response.json()
+      console.log('Response:', data)
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Upload failed')
+        throw new Error(data.detail || `Upload failed: ${response.status}`)
       }
 
       setSessionId(data.session_id)
       setAnalysisData(data)
+      setSelectedFile(null) // Clear after successful upload
     } catch (err) {
+      console.error('Upload error:', err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -131,7 +147,7 @@ export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysi
         <div className="border-2 border-dashed border-[rgba(255,255,255,0.2)] rounded-xl p-8 text-center hover:border-[#6366f1] transition-colors">
           <input
             type="file"
-            onChange={handleFileUpload}
+            onChange={handleFileSelect}
             accept={uploadType === 'zip' ? '.zip' : '.py,.cpp,.java,.go,.rs'}
             className="hidden"
             id="file-upload"
@@ -146,22 +162,38 @@ export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysi
             </div>
             <div>
               <p className="font-medium">
-                {uploadType === 'zip' ? 'Upload project ZIP' : 'Upload source file'}
+                {selectedFile ? selectedFile.name : (uploadType === 'zip' ? 'Click to select ZIP file' : 'Click to select source file')}
               </p>
               <p className="text-sm text-[#64748b] mt-1">
-                {uploadType === 'zip' 
-                  ? 'Drag & drop or click to select .zip file' 
-                  : 'Drag & drop or click to select source file'}
+                {selectedFile 
+                  ? `Size: ${(selectedFile.size / 1024).toFixed(1)} KB` 
+                  : (uploadType === 'zip' 
+                    ? 'Select a .zip file with your project' 
+                    : 'Supports: .py, .cpp, .java, .go, .rs')}
               </p>
             </div>
           </label>
         </div>
 
-        {loading && (
-          <div className="flex items-center justify-center gap-2 mt-4 text-[#6366f1]">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
-            <span>Analyzing...</span>
-          </div>
+        {/* Analyze Button */}
+        {selectedFile && (
+          <button
+            onClick={handleAnalyze}
+            disabled={loading}
+            className="btn btn-primary w-full"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Upload size={18} />
+                Analyze {uploadType === 'zip' ? 'Project' : 'File'}
+              </>
+            )}
+          </button>
         )}
 
         {error && (
