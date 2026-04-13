@@ -203,6 +203,10 @@ function App() {
   return (
     <Router>
       <Layout apiStatus={apiStatus}>
+        <div style={{padding: '20px'}}>
+          <h1>TEST: React is rendering!</h1>
+          <p>API Status: {apiStatus?.status || 'checking...'}</p>
+        </div>
         <Routes>
           <Route 
             path="/" 
