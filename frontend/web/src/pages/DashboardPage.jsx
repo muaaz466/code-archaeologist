@@ -12,6 +12,7 @@ const LANGUAGES = [
 export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysisData, setAnalysisData }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(false)
   const [selectedLang, setSelectedLang] = useState('auto')
   const [uploadType, setUploadType] = useState('file') // 'file' or 'zip'
   const [selectedFile, setSelectedFile] = useState(null)
@@ -32,6 +33,7 @@ export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysi
 
     setLoading(true)
     setError(null)
+    setSuccess(false)
 
     const formData = new FormData()
     formData.append('file', selectedFile)
@@ -57,6 +59,7 @@ export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysi
 
       setSessionId(data.session_id)
       setAnalysisData(data)
+      setSuccess(true)
       setSelectedFile(null) // Clear after successful upload
     } catch (err) {
       console.error('Upload error:', err)
@@ -194,6 +197,13 @@ export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysi
               </>
             )}
           </button>
+        )}
+
+        {success && (
+          <div className="flex items-center gap-2 mt-4 text-green-400 bg-green-500/10 p-3 rounded-lg">
+            <CheckCircle size={18} />
+            <span>Analysis complete! Session: {sessionId?.slice(0, 16)}...</span>
+          </div>
         )}
 
         {error && (
