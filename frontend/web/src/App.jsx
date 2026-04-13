@@ -174,13 +174,31 @@ function App() {
   const [apiStatus, setApiStatus] = useState(null)
   const [sessionId, setSessionId] = useState(null)
   const [analysisData, setAnalysisData] = useState(null)
+  const [appError, setAppError] = useState(null)
 
   useEffect(() => {
-    fetch(`${API_URL}/health`)
-      .then(r => r.json())
-      .then(data => setApiStatus(data))
-      .catch(() => setApiStatus({ status: 'offline' }))
+    try {
+      fetch(`${API_URL}/health`)
+        .then(r => r.json())
+        .then(data => setApiStatus(data))
+        .catch(() => setApiStatus({ status: 'offline' }))
+    } catch (err) {
+      console.error('App init error:', err)
+      setAppError(err.message)
+    }
   }, [])
+
+  if (appError) {
+    return (
+      <div style={{padding: '20px', color: 'white', background: '#0f172a', minHeight: '100vh'}}>
+        <h1>Error Loading App</h1>
+        <p style={{color: '#ef4444'}}>{appError}</p>
+        <pre style={{background: '#1e293b', padding: '10px', marginTop: '20px'}}>
+          Check console for details
+        </pre>
+      </div>
+    )
+  }
 
   return (
     <Router>
