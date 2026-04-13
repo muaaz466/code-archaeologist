@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { PlayCircle, AlertTriangle, ArrowRight, CheckCircle, XCircle } from 'lucide-react'
 
-export default function WhatIfPage({ apiUrl, sessionId, analysisData }) {
+export default function WhatIfPage({ apiUrl, sessionId: propSessionId, analysisData }) {
+  // Fallback to localStorage if prop is null (page refresh/direct navigation)
+  const sessionId = propSessionId || localStorage.getItem('codearch_session_id')
   const [selectedFunction, setSelectedFunction] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)

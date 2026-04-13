@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { FileText, Download, FileCode, CheckCircle, AlertCircle } from 'lucide-react'
 
-export default function ReportsPage({ apiUrl, sessionId, analysisData }) {
+export default function ReportsPage({ apiUrl, sessionId: propSessionId, analysisData }) {
+  // Fallback to localStorage if prop is null (page refresh/direct navigation)
+  const sessionId = propSessionId || localStorage.getItem('codearch_session_id')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)

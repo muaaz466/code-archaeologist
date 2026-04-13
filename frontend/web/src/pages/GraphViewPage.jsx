@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { GitGraph, ZoomIn, ZoomOut, Move, Info, AlertCircle } from 'lucide-react'
 
-export default function GraphViewPage({ apiUrl, sessionId, analysisData }) {
+export default function GraphViewPage({ apiUrl, sessionId: propSessionId, analysisData }) {
+  // Fallback to localStorage if prop is null (page refresh/direct navigation)
+  const sessionId = propSessionId || localStorage.getItem('codearch_session_id')
   const [graphData, setGraphData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)

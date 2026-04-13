@@ -9,7 +9,12 @@ const LANGUAGES = [
   { id: 'rust', name: 'Rust', ext: '.rs', color: '#dea584' },
 ]
 
-export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysisData, setAnalysisData }) {
+export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysisData: propAnalysisData, setAnalysisData }) {
+  // Fallback to localStorage if prop is null (page refresh/direct navigation)
+  const analysisData = propAnalysisData || (() => {
+    const saved = localStorage.getItem('codearch_analysis_data')
+    return saved ? JSON.parse(saved) : null
+  })()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
