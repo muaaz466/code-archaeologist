@@ -172,9 +172,36 @@ function Layout({ children, apiStatus }) {
 
 function App() {
   const [apiStatus, setApiStatus] = useState(null)
-  const [sessionId, setSessionId] = useState(null)
-  const [analysisData, setAnalysisData] = useState(null)
+  const [sessionId, setSessionIdState] = useState(() => {
+    // Load from localStorage on init
+    return localStorage.getItem('codearch_session_id') || null
+  })
+  const [analysisData, setAnalysisDataState] = useState(() => {
+    // Load from localStorage on init
+    const saved = localStorage.getItem('codearch_analysis_data')
+    return saved ? JSON.parse(saved) : null
+  })
   const [appError, setAppError] = useState(null)
+
+  // Wrapper to save to localStorage when session changes
+  const setSessionId = (id) => {
+    setSessionIdState(id)
+    if (id) {
+      localStorage.setItem('codearch_session_id', id)
+    } else {
+      localStorage.removeItem('codearch_session_id')
+    }
+  }
+
+  // Wrapper to save to localStorage when analysis data changes
+  const setAnalysisData = (data) => {
+    setAnalysisDataState(data)
+    if (data) {
+      localStorage.setItem('codearch_analysis_data', JSON.stringify(data))
+    } else {
+      localStorage.removeItem('codearch_analysis_data')
+    }
+  }
 
   useEffect(() => {
     try {
