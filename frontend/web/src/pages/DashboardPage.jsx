@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Upload, Folder, FileCode, Zap, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, Folder, FileCode, Zap, CheckCircle, AlertCircle, PlayCircle } from 'lucide-react'
 
 const LANGUAGES = [
   { id: 'python', name: 'Python', ext: '.py', color: '#3776ab' },
@@ -266,7 +266,7 @@ export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysi
               View Graph
             </a>
             <a href="/whatif" className="btn btn-secondary">
-              <Play size={16} />
+              <PlayCircle size={16} />
               Run What-If
             </a>
             <a href="/reports" className="btn btn-secondary">

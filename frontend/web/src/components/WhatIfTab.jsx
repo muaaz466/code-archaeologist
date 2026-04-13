@@ -42,7 +42,7 @@ export default function WhatIfTab({ apiUrl }) {
     <div className="space-y-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Play size={20} className="text-primary-600" />
+          <PlayCircle size={20} className="text-primary-600" />
           What-If Simulator
         </h2>
         <p className="text-gray-600 mb-4">
@@ -82,7 +82,7 @@ export default function WhatIfTab({ apiUrl }) {
             disabled={!sessionId || !functionName || loading}
             className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? <Loader2 size={20} className="animate-spin" /> : <Play size={20} />}
+            {loading ? <Loader2 size={20} className="animate-spin" /> : <PlayCircle size={20} />}
             {loading ? 'Simulating...' : 'Run Simulation'}
           </button>
 
