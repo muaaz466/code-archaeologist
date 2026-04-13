@@ -192,6 +192,11 @@ class BatchAnalyzer:
         causal_graph = None
         detected_languages = set()
         
+        # Track per-file statistics and cross-file relationships
+        file_stats = {}  # {filename: {functions: [], function_count: int, events: []}}
+        function_to_file = {}  # {function_name: filename}
+        cross_file_calls = []  # [{caller: func, caller_file: file, callee: func, callee_file: file}]
+        
         try:
             # Extract and analyze
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -266,20 +271,40 @@ class BatchAnalyzer:
                     files_analyzed += 1
                     detected_languages.add(detected_lang)
                     
+                    # Track per-file statistics
+                    file_key = str(file_path.name)
+                    file_functions = []
+                    
                     if events:
                         all_events.extend(events)
                         print(f"  📊 {file_path.name}: {len(events)} events, {len(ast_functions)} AST functions")
                         
-                        # Extract function names from events
+                        # Extract function names from events and track which file they're in
                         for event in events:
+                            func_name = None
                             if hasattr(event, 'function'):
-                                all_functions.add(event.function)
+                                func_name = event.function
+                                all_functions.add(func_name)
+                                function_to_file[func_name] = file_key
+                                file_functions.append(func_name)
                             elif isinstance(event, dict) and 'function' in event:
-                                all_functions.add(event['function'])
+                                func_name = event['function']
+                                all_functions.add(func_name)
+                                function_to_file[func_name] = file_key
+                                file_functions.append(func_name)
+                    
+                    # Store file stats
+                    file_stats[file_key] = {
+                        'functions': list(set(file_functions)),
+                        'function_count': len(set(file_functions)),
+                        'event_count': len(events),
+                        'language': detected_lang
+                    }
                 
                 # Build causal graph
                 causal_graph = None
                 causal_graph_json = None
+                cross_file_calls = []
                 if all_events:
                     try:
                         discovery = CausalDiscovery()
@@ -287,6 +312,21 @@ class BatchAnalyzer:
                         causal_graph = discovery.discover_causal_graph(min_confidence=0.2)
                         if causal_graph:
                             causal_graph_json = discovery.export_graph_json(causal_graph)
+                            
+                            # Analyze cross-file calls
+                            for edge in causal_graph.edges:
+                                caller = edge[0]
+                                callee = edge[1]
+                                caller_file = function_to_file.get(caller, 'unknown')
+                                callee_file = function_to_file.get(callee, 'unknown')
+                                if caller_file != callee_file:
+                                    cross_file_calls.append({
+                                        'caller': caller,
+                                        'caller_file': caller_file,
+                                        'callee': callee,
+                                        'callee_file': callee_file
+                                    })
+                            print(f"  🔗 Found {len(cross_file_calls)} cross-file calls")
                     except Exception as e:
                         errors.append(f"Causal graph failed: {str(e)}")
                         print(f"⚠️ Causal graph error: {e}")
@@ -324,7 +364,10 @@ class BatchAnalyzer:
                         "languages": final_languages,
                         "errors": errors,
                         "timestamp": datetime.now().isoformat(),
-                        "is_batch": True
+                        "is_batch": True,
+                        "file_stats": file_stats,
+                        "cross_file_calls": cross_file_calls,
+                        "function_to_file": function_to_file
                     }
                     self._save_session(session_id, session_data)
                 except Exception as e:
