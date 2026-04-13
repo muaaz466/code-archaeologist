@@ -218,7 +218,7 @@ async def upload_and_analyze(
             "nodes": result.get("nodes", 0),
             "edges": result.get("edges", 0),
             "total_events": len(result.get("events", [])),
-            "languages": [detected_lang] if isinstance(detected_lang, str) else detected_lang
+            "languages": [detected_lang]
         }
         
         return AnalysisResponse(
