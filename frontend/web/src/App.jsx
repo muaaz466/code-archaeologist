@@ -26,7 +26,7 @@ const API_URL = 'https://code-archaeologist-7qxt.onrender.com'
 const navItems = [
   { path: '/', name: 'Dashboard', icon: LayoutDashboard, description: 'Upload & Analyze Projects' },
   { path: '/graph', name: 'Graph View', icon: GitGraph, description: 'Interactive Causal Graph' },
-  { path: '/whatif', name: 'What-If', icon: PlayCircle, description: 'Simulate Function Removal' }
+  { path: '/whatif', name: 'What-If', icon: PlayCircle, description: 'Simulate Function Removal' },
   { path: '/reports', name: 'Reports', icon: FileText, description: 'PDF Export & Analysis' },
   { path: '/devtools', name: 'Dev Tools', icon: Terminal, description: 'API, CLI & CI/CD' },
 ]
