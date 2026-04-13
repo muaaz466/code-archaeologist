@@ -214,6 +214,16 @@ export default function DashboardPage({ apiUrl, sessionId, setSessionId, analysi
         )}
       </div>
 
+      {/* Debug - show raw data */}
+      {analysisData && (
+        <div className="card bg-yellow-500/10 border border-yellow-500/30">
+          <h4 className="font-semibold text-yellow-400 mb-2">Debug: Raw Response</h4>
+          <pre className="text-xs overflow-auto max-h-40">
+            {JSON.stringify(analysisData, null, 2)}
+          </pre>
+        </div>
+      )}
+
       {/* Analysis Results */}
       {analysisData && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
