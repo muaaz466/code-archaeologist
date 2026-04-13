@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, AlertTriangle, Loader2, GitBranch, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { PlayCircle, AlertTriangle, Loader2, GitBranch, AlertCircle, CheckCircle2 } from 'lucide-react'
 import axios from 'axios'
 
 export default function WhatIfTab({ apiUrl }) {

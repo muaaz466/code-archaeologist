@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, AlertTriangle, ArrowRight, CheckCircle, XCircle } from 'lucide-react'
+import { PlayCircle, AlertTriangle, ArrowRight, CheckCircle, XCircle } from 'lucide-react'
 
 export default function WhatIfPage({ apiUrl, sessionId, analysisData }) {
   const [selectedFunction, setSelectedFunction] = useState('')
@@ -97,7 +97,7 @@ export default function WhatIfPage({ apiUrl, sessionId, analysisData }) {
             </>
           ) : (
             <>
-              <Play size={18} />
+              <PlayCircle size={18} />
               Run Simulation
             </>
           )}

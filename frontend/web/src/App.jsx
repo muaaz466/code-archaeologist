@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-do
 import { 
   LayoutDashboard,
   GitGraph, 
-  Play,
+  PlayCircle,
   FileText,
   Terminal,
   Code2,
@@ -26,7 +26,7 @@ const API_URL = 'https://code-archaeologist-7qxt.onrender.com'
 const navItems = [
   { path: '/', name: 'Dashboard', icon: LayoutDashboard, description: 'Upload & Analyze Projects' },
   { path: '/graph', name: 'Graph View', icon: GitGraph, description: 'Interactive Causal Graph' },
-  { path: '/whatif', name: 'What-If', icon: Play, description: 'Simulate Function Removal' },
+  { path: '/whatif', name: 'What-If', icon: PlayCircle, description: 'Simulate Function Removal' }
   { path: '/reports', name: 'Reports', icon: FileText, description: 'PDF Export & Analysis' },
   { path: '/devtools', name: 'Dev Tools', icon: Terminal, description: 'API, CLI & CI/CD' },
 ]
@@ -203,10 +203,6 @@ function App() {
   return (
     <Router>
       <Layout apiStatus={apiStatus}>
-        <div style={{padding: '20px'}}>
-          <h1>TEST: React is rendering!</h1>
-          <p>API Status: {apiStatus?.status || 'checking...'}</p>
-        </div>
         <Routes>
           <Route 
             path="/" 
