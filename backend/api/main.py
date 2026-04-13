@@ -738,11 +738,21 @@ async def export_pdf(session_id: str, background_tasks: BackgroundTasks):
         
         project_name = f"Batch Analysis ({files_analyzed} files)" if is_batch else f"Analysis {session_id}"
         
+        # Build batch data for file analysis
+        batch_data = None
+        if is_batch:
+            batch_data = {
+                'file_stats': session.get('file_stats', {}),
+                'cross_file_calls': session.get('cross_file_calls', []),
+                'function_to_file': session.get('function_to_file', {})
+            }
+        
         generator.generate_report(
             project_name=project_name,
             graph_data=graph_data,
             query_results=session.get('query_results', {}),
-            ai_explanations=session.get('ai_explanations', [])
+            ai_explanations=session.get('ai_explanations', []),
+            batch_data=batch_data
         )
         
         # Return file

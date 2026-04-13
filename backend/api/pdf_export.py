@@ -69,7 +69,8 @@ class PDFReportGenerator:
         graph_data: Dict[str, Any],
         query_results: Dict[str, Any],
         ai_explanations: Optional[List[Dict]] = None,
-        graph_image_path: Optional[str] = None
+        graph_image_path: Optional[str] = None,
+        batch_data: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         Generate comprehensive PDF report
@@ -118,6 +119,11 @@ class PDFReportGenerator:
         # AI Explanations
         if ai_explanations:
             story.extend(self._create_ai_section(ai_explanations))
+            story.append(PageBreak())
+        
+        # File Analysis (for batch uploads)
+        if batch_data:
+            story.extend(self._create_file_analysis_section(batch_data))
             story.append(PageBreak())
         
         # Function List
@@ -358,6 +364,91 @@ class PDFReportGenerator:
             elements.append(table)
         
         return elements
+    
+    def _create_file_analysis_section(self, batch_data: Dict) -> List[Any]:
+        """Create file analysis section with per-file stats and cross-file calls"""
+        elements = []
+        
+        # Title
+        elements.append(Paragraph("File Analysis", self.styles['Heading2']))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Per-file statistics table
+        file_stats = batch_data.get('file_stats', {})
+        if file_stats:
+            elements.append(Paragraph("Functions per File:", self.styles['Heading3']))
+            elements.append(Spacer(1, 0.1*inch))
+            
+            table_data = [['File Name', 'Functions', 'Events', 'Language']]
+            for filename, stats in file_stats.items():
+                row = [
+                    filename,
+                    str(stats.get('function_count', 0)),
+                    str(stats.get('event_count', 0)),
+                    stats.get('language', 'unknown')
+                ]
+                table_data.append(row)
+            
+            if len(table_data) > 1:
+                table = Table(table_data, colWidths=[2.5*inch, 1*inch, 1*inch, 1.5*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Courier'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ]))
+                elements.append(table)
+            elements.append(Spacer(1, 0.3*inch))
+        
+        # Cross-file calls section
+        cross_file_calls = batch_data.get('cross_file_calls', [])
+        if cross_file_calls:
+            elements.append(Paragraph("Cross-File Function Calls:", self.styles['Heading3']))
+            elements.append(Spacer(1, 0.1*inch))
+            
+            table_data = [['Caller Function', 'Caller File', 'Calls Function', 'In File']]
+            for call in cross_file_calls:
+                row = [
+                    call.get('caller', ''),
+                    call.get('caller_file', ''),
+                    call.get('callee', ''),
+                    call.get('callee_file', '')
+                ]
+                table_data.append(row)
+            
+            if len(table_data) > 1:
+                table = Table(table_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.lightblue),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Courier'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ]))
+                elements.append(table)
+                elements.append(Spacer(1, 0.2*inch))
+                elements.append(Paragraph(
+                    f"Total cross-file calls: {len(cross_file_calls)}",
+                    self.styles['Normal']
+                ))
+        else:
+            elements.append(Paragraph(
+                "No cross-file function calls detected.",
+                self.styles['Normal']
+            ))
+        
+        return elements
 
 
 def export_to_pdf(
@@ -365,7 +456,8 @@ def export_to_pdf(
     output_path: str,
     graph_data: Dict,
     query_results: Dict,
-    ai_explanations: Optional[List[Dict]] = None
+    ai_explanations: Optional[List[Dict]] = None,
+    batch_data: Optional[Dict] = None
 ) -> str:
     """
     Quick export to PDF
@@ -378,7 +470,8 @@ def export_to_pdf(
         project_name=project_name,
         graph_data=graph_data,
         query_results=query_results,
-        ai_explanations=ai_explanations
+        ai_explanations=ai_explanations,
+        batch_data=batch_data
     )
 
 
